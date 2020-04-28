@@ -15,6 +15,9 @@
 #include <linux/videodev2.h>
 #include <stdbool.h>
 
+#include <openssl/sha.h>
+#include <signal.h>
+
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
 struct buffer {
@@ -22,6 +25,7 @@ struct buffer {
     size_t length;
 };
 
+static const bool strict = false;
 static char *dev_name;
 static int fd = -1;
 struct buffer *buffers;
@@ -35,10 +39,7 @@ static const u_int HEIGHT = 480;
 //static const u_int HEIGHT = 120;
 static const u_int DWIDTH = WIDTH * 2;
 FILE *out_file;
-
-void print_perf_stats();
-
-void push_byte(int size, u_int idx, uint8_t conv);
+FILE *stat_file;
 
 static void errno_exit(const char *s) {
     fprintf(stderr, "%s error %d, %s\n", s, errno, strerror(errno));
@@ -55,92 +56,83 @@ static int xioctl(int fh, int request, void *arg) {
     return r;
 }
 
-bool is_pixel_lit(const u_int8_t *p, u_int idx) { return p[idx] > 4u; }
+static bool is_pixel_lit(const u_int8_t *p, u_int idx) { return p[idx] > 4u; }
 
-/*
-309472 of 614400; conv: 128; bytes so far: 0000001
-309474 of 614400; conv: 128; bytes so far: 0000002
-309476 of 614400; conv: 128; bytes so far: 0000003
-310750 of 614400; conv: 129; bytes so far: 0000004
-310752 of 614400; conv: 129; bytes so far: 0000005
-310754 of 614400; conv: 129; bytes so far: 0000006
-310756 of 614400; conv: 129; bytes so far: 0000007
+static void push_xy(u_int x, u_int y) {
+    char z[32];
+    sprintf(z, "%d:%d\n", x, y);
+    fputs(z, stat_file);
+    fflush(stat_file);
 
-// 1280 per line
-310754
+//    printf("%d of %d; conv: %d; bytes so far: %07lu\n", idx, size, conv, bytes);
+}
 
-     ###
-    ####
+static void push_byte(int size, u_int idx, uint8_t conv) {
+    fputc(conv, out_file);
+    fflush(out_file);
 
+//    printf("%d of %d; conv: %d; bytes so far: %07lu\n", idx, size, conv, bytes);
+}
 
- * 0 2 4 6 8
- 0[#]# #
- 1 # # #
- 2 # # #
- 3
- 4
- 5
- */
 static void process_image(const u_int8_t *p, int size) {
-    frame_number++;
-//    printf("Processing frame %d\n", frame_number);
-
     for (u_int idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) { // we're on black
             continue;
         }
-        // check neighbors
-        if (idx > DWIDTH) {
-            // this is not the first row
-            if (is_pixel_lit(p, idx - DWIDTH)) {
-                // N is on
+
+        if (strict) {
+            // check neighbors
+            if (idx > DWIDTH) {
+                // this is not the first row
+                if (is_pixel_lit(p, idx - DWIDTH)) {
+                    // N is on
+                    continue;
+                }
+                if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH - 2)) {
+                    // not the leftmost column, NW is on
+                    continue;
+                }
+                if ((idx + 2) % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH + 2)) {
+                    // not the rightmost column, NE is on
+                    continue;
+                }
+            }
+            if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - 2)) {
+                // not the leftmost column, W is on
                 continue;
             }
-            if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH - 2)) {
-                // not the leftmost column, NW is on
-                continue;
-            }
-            if ((idx + 2) % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH + 2)) {
-                // not the rightmost column, NE is on
-                continue;
-            }
-        }
-        if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - 2)) {
-            // not the leftmost column, W is on
-            continue;
-        }
-        bytes += 2;
-//        uint8_t conv = ((double) idx) / size * (UINT8_MAX + 1);
-        u_int x = (idx % DWIDTH) / 2;
-        uint8_t conv = ((double) x) / WIDTH * (UINT8_MAX + 1);
-        push_byte(size, idx, conv);
+            bytes += 2;
+            u_int x = (idx % DWIDTH) / 2;
+            uint8_t conv = ((double) x) / WIDTH * (UINT8_MAX + 1);
+            push_byte(size, idx, conv);
 
-        u_int y = idx / DWIDTH;
-        conv = ((double) y) / HEIGHT * (UINT8_MAX + 1);
-        push_byte(size, idx, conv);
-        printf("Flash at %3d:%3d\n", x, y);
-
-        print_perf_stats();
-    }
-
+            u_int y = idx / DWIDTH;
+            conv = ((double) y) / HEIGHT * (UINT8_MAX + 1);
+            push_byte(size, idx, conv);
+//        printf("Flash at %3d:%3d\n", x, y);
+            push_xy(x, y);
+        } else {
+            u_char hash[SHA512_DIGEST_LENGTH];
+            SHA512(p, size, hash);
 
 /*
-    if (out_buf)
-        fwrite(p, size, 1, out_file);
-
-    fflush(out_file);
-    fclose(out_file);
+            printf("hash: ");
+            for (int x = 0; x < SHA512_DIGEST_LENGTH; x++) {
+                printf("%02x", hash[x]);
+            }
+            putchar('\n');
 */
+            bytes += SHA512_DIGEST_LENGTH;
+            for (int i = 0; i < SHA512_DIGEST_LENGTH; i++) {
+                fputc(hash[i], out_file);
+            }
+            return;
+        }
+    }
+
 }
 
-void push_byte(int size, u_int idx, uint8_t conv) {
-    fputc(conv, out_file);
-    fflush(out_file);
-
-    printf("%d of %d; conv: %d; bytes so far: %07lu\n", idx, size, conv, bytes);
-}
-
-void print_perf_stats() {
+static void print_perf_stats(void) {
     gettimeofday(&checkpoint, NULL);
     double time_spent = (double) (checkpoint.tv_usec - start.tv_usec) / 1.0e6 +
                         (double) (checkpoint.tv_sec - start.tv_sec);
@@ -174,6 +166,9 @@ static int read_frame(void) {
     }
 
     assert(buf.index < n_buffers);
+
+    frame_number++;
+//    printf("Processing frame %d\n", frame_number);
 
     process_image(buffers[buf.index].start, buf.bytesused);
 
@@ -425,9 +420,18 @@ static void open_device(void) {
     }
 }
 
+static void signal_usr1_handler(int signnum) {
+    if (SIGUSR1 == signnum) {
+        print_perf_stats();
+    }
+}
+
 int main(int argc, char **argv) {
+    signal(SIGUSR1, signal_usr1_handler);
+
     dev_name = "/dev/video0";
-    out_file = fopen("myout.dat", "wa");
+    out_file = fopen("myout.dat", "wba");
+    stat_file = fopen("stat.dat", "wa");
 
     gettimeofday(&start, NULL);
 

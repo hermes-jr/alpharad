@@ -14,18 +14,31 @@
 
 #include <linux/videodev2.h>
 #include <stdbool.h>
-
-#include <openssl/sha.h>
 #include <signal.h>
 
+#ifdef HAVE_OPENSSL
+
+#include <openssl/sha.h>
+
+#endif
+
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
+
+enum frame_processor {
+    PROC_DEFAULT,
+#ifdef HAVE_OPENSSL
+    PROC_SHA512_NONBLANK_FRAMES_ONLY,
+    PROC_SHA512_ALL_FRAMES,
+#endif
+};
 
 struct buffer {
     u_int8_t *start;
     size_t length;
 };
 
-static const bool strict = false;
+static enum frame_processor frame_processor = PROC_DEFAULT;
+static const bool strict = true;
 static char *dev_name;
 static int fd = -1;
 struct buffer *buffers;
@@ -33,6 +46,9 @@ static u_int8_t n_buffers;
 static u_long frame_number = 0;
 static u_long bytes = 0;
 static struct timeval start, checkpoint;
+
+static void process_image_default(const u_int8_t *p, int size);
+
 static const u_int WIDTH = 640;
 static const u_int HEIGHT = 480;
 //static const u_int WIDTH = 160;
@@ -75,62 +91,70 @@ static void push_byte(int size, u_int idx, uint8_t conv) {
 }
 
 static void process_image(const u_int8_t *p, int size) {
+    switch (frame_processor) {
+#ifdef HAVE_OPENSSL
+        case PROC_SHA512_NONBLANK_FRAMES_ONLY:
+            printf("aaa\n");
+            break;
+#endif
+        case PROC_DEFAULT:
+        default:
+            process_image_default(p, size);
+            break;
+    }
+}
+
+static void process_image_default(const u_int8_t *p, int size) {
     for (u_int idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) { // we're on black
             continue;
         }
-
-        if (strict) {
-            // check neighbors
-            if (idx > DWIDTH) {
-                // this is not the first row
-                if (is_pixel_lit(p, idx - DWIDTH)) {
-                    // N is on
-                    continue;
-                }
-                if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH - 2)) {
-                    // not the leftmost column, NW is on
-                    continue;
-                }
-                if ((idx + 2) % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH + 2)) {
-                    // not the rightmost column, NE is on
-                    continue;
-                }
-            }
-            if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - 2)) {
-                // not the leftmost column, W is on
+        // check neighbors
+        if (idx > DWIDTH) {
+            // this is not the first row
+            if (is_pixel_lit(p, idx - DWIDTH)) {
+                // N is on
                 continue;
             }
-            bytes += 2;
-            u_int x = (idx % DWIDTH) / 2;
-            uint8_t conv = ((double) x) / WIDTH * (UINT8_MAX + 1);
-            push_byte(size, idx, conv);
-
-            u_int y = idx / DWIDTH;
-            conv = ((double) y) / HEIGHT * (UINT8_MAX + 1);
-            push_byte(size, idx, conv);
-//        printf("Flash at %3d:%3d\n", x, y);
-            push_xy(x, y);
-        } else {
-            u_char hash[SHA512_DIGEST_LENGTH];
-            SHA512(p, size, hash);
-
-/*
-            printf("hash: ");
-            for (int x = 0; x < SHA512_DIGEST_LENGTH; x++) {
-                printf("%02x", hash[x]);
+            if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH - 2)) {
+                // not the leftmost column, NW is on
+                continue;
             }
-            putchar('\n');
-*/
-            bytes += SHA512_DIGEST_LENGTH;
-            for (int i = 0; i < SHA512_DIGEST_LENGTH; i++) {
-                fputc(hash[i], out_file);
+            if ((idx + 2) % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH + 2)) {
+                // not the rightmost column, NE is on
+                continue;
             }
-            return;
         }
-    }
+        if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - 2)) {
+            // not the leftmost column, W is on
+            continue;
+        }
+        bytes += 2;
+        u_int x = (idx % DWIDTH) / 2;
+        uint8_t conv = ((double) x) / WIDTH * (UINT8_MAX + 1);
+        push_byte(size, idx, conv);
 
+        u_int y = idx / DWIDTH;
+        conv = ((double) y) / HEIGHT * (UINT8_MAX + 1);
+        push_byte(size, idx, conv);
+//        printf("Flash at %3d:%3d\n", x, y);
+        push_xy(x, y);
+    }
 }
+
+#ifdef HAVE_OPENSSL
+
+static void process_image_sha512_all_frames(const u_int8_t *p, int size) {
+    u_char hash[SHA512_DIGEST_LENGTH];
+    SHA512(p, size, hash);
+    bytes += SHA512_DIGEST_LENGTH;
+    for (int i = 0; i < SHA512_DIGEST_LENGTH; i++) {
+        fputc(hash[i], out_file);
+    }
+}
+
+#endif
+
 
 static void print_perf_stats(void) {
     gettimeofday(&checkpoint, NULL);
@@ -430,8 +454,8 @@ int main(int argc, char **argv) {
     signal(SIGUSR1, signal_usr1_handler);
 
     dev_name = "/dev/video0";
-    out_file = fopen("myout.dat", "wba");
-    stat_file = fopen("stat.dat", "wa");
+    out_file = fopen("myout.dat", "ab");
+    stat_file = fopen("stat.dat", "a");
 
     gettimeofday(&start, NULL);
 

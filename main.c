@@ -31,8 +31,14 @@ static u_long bytes = 0;
 static struct timeval start, checkpoint;
 static const u_int WIDTH = 640;
 static const u_int HEIGHT = 480;
+//static const u_int WIDTH = 160;
+//static const u_int HEIGHT = 120;
+static const u_int DWIDTH = WIDTH * 2;
+FILE *out_file;
 
-bool is_pixel_lit(const u_int8_t *p, int idx);
+void print_perf_stats();
+
+void push_byte(int size, u_int idx, uint8_t conv);
 
 static void errno_exit(const char *s) {
     fprintf(stderr, "%s error %d, %s\n", s, errno, strerror(errno));
@@ -49,6 +55,7 @@ static int xioctl(int fh, int request, void *arg) {
     return r;
 }
 
+bool is_pixel_lit(const u_int8_t *p, u_int idx) { return p[idx] > 4u; }
 
 /*
 309472 of 614400; conv: 128; bytes so far: 0000001
@@ -78,14 +85,62 @@ static void process_image(const u_int8_t *p, int size) {
     frame_number++;
 //    printf("Processing frame %d\n", frame_number);
 
-    for (int idx = 0; idx < size; idx += 2) {
-        if (is_pixel_lit(p, idx)) {
-            bytes++;
-            uint8_t conv = ((double) idx) / size * (UINT8_MAX + 1);
-            printf("%d of %d; conv: %d; bytes so far: %07d\n", idx, size, conv, bytes);
+    for (u_int idx = 0; idx < size; idx += 2) {
+        if (!is_pixel_lit(p, idx)) { // we're on black
+            continue;
         }
+        // check neighbors
+        if (idx > DWIDTH) {
+            // this is not the first row
+            if (is_pixel_lit(p, idx - DWIDTH)) {
+                // N is on
+                continue;
+            }
+            if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH - 2)) {
+                // not the leftmost column, NW is on
+                continue;
+            }
+            if ((idx + 2) % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH + 2)) {
+                // not the rightmost column, NE is on
+                continue;
+            }
+        }
+        if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - 2)) {
+            // not the leftmost column, W is on
+            continue;
+        }
+        bytes += 2;
+//        uint8_t conv = ((double) idx) / size * (UINT8_MAX + 1);
+        u_int x = (idx % DWIDTH) / 2;
+        uint8_t conv = ((double) x) / WIDTH * (UINT8_MAX + 1);
+        push_byte(size, idx, conv);
+
+        u_int y = idx / DWIDTH;
+        conv = ((double) y) / HEIGHT * (UINT8_MAX + 1);
+        push_byte(size, idx, conv);
+        printf("Flash at %3d:%3d\n", x, y);
+
+        print_perf_stats();
     }
 
+
+/*
+    if (out_buf)
+        fwrite(p, size, 1, out_file);
+
+    fflush(out_file);
+    fclose(out_file);
+*/
+}
+
+void push_byte(int size, u_int idx, uint8_t conv) {
+    fputc(conv, out_file);
+    fflush(out_file);
+
+    printf("%d of %d; conv: %d; bytes so far: %07lu\n", idx, size, conv, bytes);
+}
+
+void print_perf_stats() {
     gettimeofday(&checkpoint, NULL);
     double time_spent = (double) (checkpoint.tv_usec - start.tv_usec) / 1.0e6 +
                         (double) (checkpoint.tv_sec - start.tv_sec);
@@ -93,21 +148,7 @@ static void process_image(const u_int8_t *p, int size) {
            (int) time_spent,
            ((double) frame_number) / time_spent,
            ((double) bytes) / (time_spent / 60));
-
-/*
-    char filename[15];
-    sprintf(filename, "frame-%d.raw", frame_number);
-    FILE *fp = fopen(filename, "wb");
-
-    if (out_buf)
-        fwrite(p, size, 1, fp);
-
-    fflush(fp);
-    fclose(fp);
-*/
 }
-
-bool is_pixel_lit(const u_int8_t *p, int idx) { return p[idx] > 4u; }
 
 static int read_frame(void) {
     struct v4l2_buffer buf;
@@ -145,7 +186,7 @@ static int read_frame(void) {
 
 static void mainloop(void) {
 
-    for (;;) {
+    for (; bytes < 1.0e6;) {
         fd_set fds;
         struct timeval tv;
         int r;
@@ -386,6 +427,7 @@ static void open_device(void) {
 
 int main(int argc, char **argv) {
     dev_name = "/dev/video0";
+    out_file = fopen("myout.dat", "wa");
 
     gettimeofday(&start, NULL);
 
@@ -396,6 +438,9 @@ int main(int argc, char **argv) {
     stop_capturing();
     uninit_device();
     close_device();
+
+    fclose(out_file);
+
     fprintf(stderr, "\n");
     return EXIT_SUCCESS;
 }

@@ -8,6 +8,7 @@
 #endif
 
 #include "alpharad.h"
+#include <math.h>
 
 struct settings settings = {
         .dev_name = "/dev/video0",
@@ -23,11 +24,6 @@ static u_long frame_number = 0;
 static u_long bytes = 0;
 static struct timeval start, checkpoint;
 
-static const u_int WIDTH = 640;
-static const u_int HEIGHT = 480;
-//static const u_int WIDTH = 160;
-//static const u_int HEIGHT = 120;
-static const u_int DWIDTH = WIDTH * 2;
 FILE *out_file;
 FILE *stat_file;
 
@@ -45,7 +41,7 @@ static void push_byte(uint8_t conv) {
     fflush(out_file);
 }
 
-bool is_pixel_lit(const u_int8_t *p, u_int idx) { return p[idx] > 4u; }
+bool is_pixel_lit(const u_int8_t *p, u_int idx) { return p[idx] > 32u; }
 
 void process_image(const u_int8_t *p, u_int size) {
     switch (settings.frame_processor) {
@@ -65,6 +61,8 @@ void process_image(const u_int8_t *p, u_int size) {
 }
 
 void process_image_default(const u_int8_t *p, u_int size) {
+    const u_int dwidth = settings.width * 2;
+
     for (u_int idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) {
             // We're on black, skip to next pixel
@@ -77,35 +75,35 @@ void process_image_default(const u_int8_t *p, u_int size) {
          * Only a few flashes have radius more than 2.
          * Might be an issue on higher resolutions though, so this is not final.
          */
-        if (idx >= DWIDTH) {
-            if (is_pixel_lit(p, idx - DWIDTH)) {
+        if (idx >= dwidth) {
+            if (is_pixel_lit(p, idx - dwidth)) {
                 // This is not the first row and N is on
                 continue;
             }
-            if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH - 2)) {
+            if (idx % dwidth != 0 && is_pixel_lit(p, idx - dwidth - 2)) {
                 // Not the leftmost column and NW is on
                 continue;
             }
-            if ((idx + 2) % DWIDTH != 0 && is_pixel_lit(p, idx - DWIDTH + 2)) {
+            if ((idx + 2) % dwidth != 0 && is_pixel_lit(p, idx - dwidth + 2)) {
                 // Not the rightmost column and NE is on
                 continue;
             }
         }
-        if (idx % DWIDTH != 0 && is_pixel_lit(p, idx - 2)) {
+        if (idx % dwidth != 0 && is_pixel_lit(p, idx - 2)) {
             // Not the leftmost column, W is on
             continue;
         }
 
         // Finally, we found a bright pixel, convert its coordinates to 2 random bytes
         bytes += 2;
-        u_int x = (idx % DWIDTH) / 2;
-        uint8_t conv = ((double) x) / (WIDTH - 1) * UINT8_MAX;
-        push_byte(conv);
+        u_int x = (idx % dwidth) / 2;
+        uint8_t coord_as_byte1 = roundf(UINT8_MAX * ((double) x / (settings.width - 1)));
+        push_byte(coord_as_byte1);
 
-        u_int y = idx / DWIDTH;
-        conv = ((double) y) / (HEIGHT - 1) * UINT8_MAX;
-        push_byte(conv);
-//        printf("Flash at %3d:%3d\n", x, y);
+        u_int y = idx / dwidth;
+        uint8_t coord_as_byte2 = round(UINT8_MAX * ((double) y / (settings.height - 1)));
+        push_byte(coord_as_byte2);
+        printf("Flash at %3d:%3d, generated: %3d, %3d\n", x, y, coord_as_byte1, coord_as_byte2);
         push_xy(x, y);
     }
 }
@@ -149,9 +147,9 @@ static void print_perf_stats(void) {
            ((double) bytes) / (time_spent / 60));
 }
 
-static void mainloop(void) {
+static void main_loop(void) {
 
-    for (; bytes < 1.0e6;) {
+    for (;;) {
         fd_set fds;
         struct timeval tv;
         int r;
@@ -183,9 +181,8 @@ static void mainloop(void) {
     }
 }
 
-
-static void signal_usr1_handler(int signnum) {
-    if (SIGUSR1 == signnum) {
+static void signal_usr1_handler(int signum) {
+    if (SIGUSR1 == signum) {
         print_perf_stats();
     }
 }
@@ -205,7 +202,7 @@ int main(int argc, char **argv) {
     open_device();
     init_device();
     start_capturing();
-    mainloop();
+    main_loop();
     stop_capturing();
     uninit_device();
     close_device();

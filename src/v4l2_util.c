@@ -1,3 +1,10 @@
+/*
+ * The most part of this code is from V4L2 video capture example
+ *
+ * This program is provided with the V4L2 API
+ * see http://linuxtv.org/docs.php for more information
+ */
+
 #include "alpharad.h"
 #include "v4l2_util.h"
 
@@ -266,4 +273,3 @@ void errno_exit(const char *s) {
     fprintf(stderr, "%s error %d, %s\n", s, errno, strerror(errno));
     exit(EXIT_FAILURE);
 }
-

@@ -1,7 +1,7 @@
 add_executable(alpharad alpharad.c)
 
 add_library(v4l2_util v4l2_util.c)
-target_link_libraries(alpharad PRIVATE v4l2_util)
+target_link_libraries(alpharad PRIVATE v4l2_util m)
 
 find_package(OpenSSL)
 

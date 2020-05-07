@@ -60,6 +60,7 @@ dkms.conf
 
 # User-specific stuff:
 /.idea/
+/qa/.idea/
 
 ## File-based project format:
 *.iws
@@ -93,3 +94,7 @@ install_manifest.txt
 compile_commands.json
 CTestTestfile.cmake
 _deps
+
+###
+qa/screenshots/
+alpharad.cbp

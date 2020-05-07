@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+import numpy as np
+from PIL import Image
+
+width = 640
+height = 480
+data = np.zeros((height, width, 3), dtype=np.uint8)
+numpoints = 0
+
+# Build a grayscale image (grades: up to 3 hits per pixel, with more hits - just white)
+with open('points.txt', 'r') as f:
+    for line in f:
+        line = line.strip()
+        if not line:
+            continue
+        coords = line.split(':')
+        x = int(coords[0])
+        y = int(coords[1])
+        data[y, x] = [min(component + 85, 255) for component in data[y, x]]
+        numpoints += 1
+
+img = Image.fromarray(data)
+img.save('vis_gray_{}_hits.png'.format(numpoints))
+
+# Transform data, each pixel is either hit or not
+it = np.nditer(data, flags=['multi_index'], op_flags=['readwrite'])
+while not it.finished:
+    data[it.multi_index] = 0 if data[it.multi_index] == 0 else 255
+    it.iternext()
+
+img = Image.fromarray(data)
+img.save('vis_bw_{}_hits.png'.format(numpoints))

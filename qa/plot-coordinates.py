@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+"""
+Read text file with "X:Y" coordinates in each line.
+
+Build scatter plots along with distribution of pixel hit frequencies
+for x and y coordinates.
+
+Introduces some errors caused by vector to raster conversion.
+Sadly, I couldn't overcome this but nvm, this is just a hobby project =)
+"""
 try:
     from scipy import stats
 except ImportError:
@@ -13,10 +22,11 @@ title = 'alpharad plot'
 
 def read_data():
     global title
-    with open('points.txt', 'r') as f:
+    with open('../points.log', 'r') as f:
         for line in f:
             line = line.strip()
-            if not line: continue
+            if not line:
+                continue
             coords = line.split(':')
             xs.append(int(coords[0]))
             ys.append(int(coords[1]))
@@ -40,11 +50,11 @@ def plot():
 
     plt.subplot(2, 2, 3)
     plt.title("Xs distribution")
-    plt.hist(xs, bins=640)
+    plt.hist(xs, bins=320)
 
     plt.subplot(2, 2, 4)
     plt.title("Ys distribution")
-    plt.hist(ys, bins=480)
+    plt.hist(ys, bins=240)
 
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
@@ -56,6 +66,8 @@ if __name__ == "__main__":
     read_data()
 
     if stats:
-        print("x stats: {}\ny stats: {}".format(stats.describe(xs), stats.describe(ys)))
+        print("x stats: {}\ny stats: {}".format(
+            stats.describe(xs),
+            stats.describe(ys)))
 
     plot()

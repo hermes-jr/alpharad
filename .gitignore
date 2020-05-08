@@ -97,4 +97,6 @@ _deps
 
 ###
 qa/screenshots/
+/out.dat
+/points.log
 alpharad.cbp

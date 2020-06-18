@@ -1,18 +1,6 @@
 #ifndef ALPHARAD_V4L2_UTIL_H
 #define ALPHARAD_V4L2_UTIL_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h> /* define CLEAR(x) */
-#include <sys/stat.h>
-#include <fcntl.h> /* low-level i/o */
-#include <unistd.h>
-#include <errno.h>
-#include <assert.h>
-#include <sys/mman.h>
-#include <sys/ioctl.h>
-#include <linux/videodev2.h>
-
 #define CLEAR(x) memset(&(x), 0, sizeof(x))
 
 struct buffer {

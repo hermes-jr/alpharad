@@ -5,7 +5,19 @@
  * see http://linuxtv.org/docs.php for more information
  */
 
-#include "alpharad.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h> /* define CLEAR(x) */
+#include <sys/stat.h>
+#include <fcntl.h> /* low-level i/o */
+#include <unistd.h>
+#include <errno.h>
+#include <assert.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <linux/videodev2.h>
+
+#include "settings.h"
 #include "v4l2_util.h"
 
 extern struct settings settings;

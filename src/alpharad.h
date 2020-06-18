@@ -11,25 +11,6 @@
 #  define D(x) do{}while(0)
 #endif //DEBUG
 
-enum frame_processor {
-    PROC_DEFAULT,
-    PROC_COMPARATOR,
-#if HAVE_OPENSSL
-    PROC_SHA512_NON_BLANK_FRAMES_ONLY,
-    PROC_SHA512_ALL_FRAMES,
-#endif //HAVE_OPENSSL
-};
-
-struct settings {
-    u_int width;
-    u_int height;
-    u_int8_t threshold;
-    enum frame_processor frame_processor;
-    char *dev_name;
-    char *file_hitlog_name;
-    char *file_out_name;
-};
-
 bool is_pixel_lit(const u_int8_t *p, u_int idx);
 
 void process_image_default(const u_int8_t *p, u_int size);

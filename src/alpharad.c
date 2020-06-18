@@ -1,5 +1,4 @@
 #include <signal.h>
-#include "v4l2_util.h"
 
 #if HAVE_OPENSSL
 
@@ -10,17 +9,17 @@
 #include "alpharad.h"
 #include <math.h>
 #include <limits.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h> /* define CLEAR(x) */
+#include <errno.h>
+#include <assert.h>
+#include <sys/time.h>
 
-struct settings settings = {
-        .dev_name = "/dev/video0",
-        .file_out_name = "out.dat",
-        .file_hitlog_name = "points.log",
-        .frame_processor = PROC_COMPARATOR,
-//        .frame_processor = PROC_DEFAULT,
-        .width = 640,
-        .height = 480,
-        .threshold = 8u
-};
+#include "settings.h"
+#include "v4l2_util.h"
+
+extern struct settings settings;
 
 int device = -1;
 static u_long frame_number = 0;
@@ -265,6 +264,8 @@ int main(int argc, char **argv) {
     // get rid of unused warning
     (void) argv;
     (void) argc;
+
+    populate_settings(argc, argv);
 
     // Avoid division by zero
     assert(settings.width > 2);

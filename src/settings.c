@@ -32,18 +32,18 @@ static const char short_options[] = "d:g:l:o:m:Mv:h";
 void print_usage(char *self_name) {
     fprintf(stdout,
             "Usage: %s [options]\n\n"
-            "Version 0.5\n"
+            "Version %s\n\n"
             "Options:\n"
-            "-d | --device name             Video device name [%s]\n"
-            "-g | --geometry WIDTHxHEIGHT   Frame dimensions [%dx%d]\n"
-            "-l | --hitlog-file logfile     Log detected flashes to logfile. Disabled by default\n"
-            "-o | --out-file file           Write processed data to file [%s] \n"
-            "-m | --mode mode               Set one of available modes\n"
-            "-M | --list-modes              List currently supported modes\n"
-            "-v | --verbose                 Verbosity level\n"
-            "-h | --help                    Print this message\n"
+            "-d, --device=PATH             Video device PATH [%s]\n"
+            "-g, --geometry=WIDTHxHEIGHT   Frame dimensions [%dx%d]\n"
+            "-l, --hitlog-file=LOGFILE     Log detected flashes to LOGFILE. Disabled by default\n"
+            "-o, --out-file=FILE           Write processed data to FILE [%s] \n"
+            "-m, --mode=MODE               Set one of available modes\n"
+            "-M, --list-modes              List currently supported modes\n"
+            "-v, --verbose=LEVEL           Set verbosity level\n"
+            "-h, --help                    Print this message\n"
             "",
-            self_name, settings.dev_name, settings.width, settings.height, settings.file_out_name);
+            self_name, PROJECT_VERSION, settings.dev_name, settings.width, settings.height, settings.file_out_name);
 }
 
 void populate_settings(int argc, char **argv) {
@@ -53,8 +53,10 @@ void populate_settings(int argc, char **argv) {
         int c = getopt_long(argc, argv,
                             short_options, long_options, &idx);
 
-        if (-1 == c)
+        if (-1 == c) {
+            optind = 0; // Breaks consecutive tests otherwise
             break;
+        }
 
         // d:g:l:o:m:Mv:h
         switch (c) {
@@ -66,11 +68,13 @@ void populate_settings(int argc, char **argv) {
                 break;
 
             case 'g': {
-                int bufsize = 32;
-                char provided_mode[bufsize];
+                int bufsize = 31;
+                char provided_mode[bufsize + 1];
                 char *mode_token;
 
-                strncpy(provided_mode, optarg, bufsize - 1);
+                strncpy(provided_mode, optarg, bufsize);
+                provided_mode[bufsize] = '\0';
+
                 mode_token = strtok(provided_mode, "x");
                 if (mode_token != NULL) {
                     settings.width = strtol(mode_token, NULL, 0);

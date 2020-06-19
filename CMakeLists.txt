@@ -11,4 +11,5 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_compile_options("$<$<CONFIG:DEBUG>:-DDEBUG>")
 
+add_compile_definitions(PROJECT_VERSION="${CMAKE_PROJECT_VERSION}")
 add_subdirectory(src)

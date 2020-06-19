@@ -12,10 +12,4 @@ if (OPENSSL_FOUND)
     target_link_libraries(${PROJECT_NAME} PRIVATE crypto)
 endif ()
 
-enable_testing()
-
-add_executable(test_lib tests/experiment.c settings.c)
-
-target_link_libraries(test_lib PRIVATE cunit)
-
-add_test(test_lib COMMAND ${EXECUTABLE_OUTPUT_PATH}/test_lib WORKING_DIRECTORY ${CMAKE_RUNTIME_OUTPUT_DIRECTORY})
+add_subdirectory(tests)

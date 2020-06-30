@@ -23,8 +23,6 @@ struct settings {
     char *file_out_name;
 };
 
-int add(int a, int b);
-
 void populate_settings(int argc, char **argv);
 
 void print_usage(char *self_name);

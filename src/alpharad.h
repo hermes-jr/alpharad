@@ -1,7 +1,6 @@
 #ifndef ALPHARAD_ALPHARAD_H
 #define ALPHARAD_ALPHARAD_H
 
-#include <stdint.h>
 #include <stdbool.h>
 #include <sys/types.h>
 

@@ -132,8 +132,3 @@ void populate_settings(int argc, char **argv) {
     }
 
 }
-
-// Fixme: this is only a test, must be removed
-int add(int a, int b) {
-    return a + b;
-}

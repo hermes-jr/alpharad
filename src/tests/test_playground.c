@@ -3,9 +3,9 @@
 #include <stdint.h>
 
 void test_playground_overflow_rotation(void) {
-    uint8_t counter;
+    uint8_t counter = 0u;
     for (uint16_t iter = 0; iter < 514u; iter++, counter++) {
-        printf("%3d | %3d | %d | %d | %2d\n", iter, counter, counter % 7, counter % 8, counter % 16);
+//        printf("%3d | %3d | %d | %d | %2d\n", iter, counter, counter % 7, counter % 8, counter % 16);
         if (iter == 0u) {
             CU_ASSERT_EQUAL(counter % 8, 0u);
             CU_ASSERT_EQUAL(counter % 16, 0u);

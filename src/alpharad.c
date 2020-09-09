@@ -22,9 +22,11 @@
 extern struct settings settings;
 
 int device = -1;
-static u_long frame_number = 0;
 static u_long bytes = 0;
-static struct timeval start, checkpoint;
+static struct timeval start_time;
+
+u_int *fps_buffer;
+uint8_t fps_buffer_idx = 0;
 
 uint8_t buf_byte;
 uint8_t buf_byte_counter;
@@ -68,7 +70,7 @@ void process_image(const u_int8_t *p, u_int size) {
 }
 
 void process_image_default(const u_int8_t *p, u_int size) {
-    const u_int dwidth = settings.width * 2;
+    const u_int dw = settings.width * 2;
 
     for (u_int idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) {
@@ -76,8 +78,8 @@ void process_image_default(const u_int8_t *p, u_int size) {
             continue;
         }
 
-        u_int x = (idx % dwidth) / 2;
-        u_int y = idx / dwidth;
+        u_int x = (idx % dw) / 2;
+        u_int y = idx / dw;
 
         if (x == 0 || y == 0 || x + 1 == settings.width || y + 1 == settings.height) {
             // Skip borders, they behave weirdly
@@ -91,26 +93,16 @@ void process_image_default(const u_int8_t *p, u_int size) {
          * Only a few flashes have radius more than 2.
          * Might be an issue on higher resolutions though, so this is not final.
          */
-        if (is_pixel_lit(p, idx - dwidth) || is_pixel_lit(p, idx - dwidth - 2) || is_pixel_lit(p, idx - dwidth + 2) ||
+        if (is_pixel_lit(p, idx - dw) || is_pixel_lit(p, idx - dw - 2) || is_pixel_lit(p, idx - dw + 2) ||
             is_pixel_lit(p, idx - 2)) {
             continue;
         }
 
-/*
-        // Finally, we found a bright pixel, convert its coordinates to 2 random bytes
-        bytes += 2;
-        uint8_t coord_as_byte1 = round(((double) (x - 1) / (settings.width - 2)) * UINT8_MAX);
-        spawn_byte(coord_as_byte1);
-
-        uint8_t coord_as_byte2 = round(((double) (y - 1) / (settings.height - 2)) * UINT8_MAX);
-        spawn_byte(coord_as_byte2);
-        D(printf("Flash at %3d:%3d, generated: %3d, %3d\n", x, y, coord_as_byte1, coord_as_byte2));
-*/
-        bytes++;
         D(printf("Flash at %3d:%3d; %d / %d\n", x, y, idx, size));
         uint8_t coord_as_byte = round(
                 ((double) idx / (size - settings.width * 2 - settings.height * 2 - 1)) * UINT8_MAX);
         spawn_byte(coord_as_byte);
+        bytes++;
         D(printf("Flash at %3d:%3d, generated: %3d\n", x, y, coord_as_byte));
 
         log_flash_at_coordinates(x, y);
@@ -118,7 +110,7 @@ void process_image_default(const u_int8_t *p, u_int size) {
 }
 
 void process_image_comparator(const u_int8_t *p, u_int size) {
-    const u_int dwidth = settings.width * 2;
+    const u_int dw = settings.width * 2;
 
     for (u_int idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) {
@@ -126,8 +118,8 @@ void process_image_comparator(const u_int8_t *p, u_int size) {
             continue;
         }
 
-        u_int x = (idx % dwidth) / 2;
-        u_int y = idx / dwidth;
+        u_int x = (idx % dw) / 2;
+        u_int y = idx / dw;
 
         if (x == 0 || y == 0 || x + 1 == settings.width || y + 1 == settings.height) {
             // Skip borders, they behave weirdly
@@ -141,7 +133,7 @@ void process_image_comparator(const u_int8_t *p, u_int size) {
          * Only a few flashes have radius more than 2.
          * Might be an issue on higher resolutions though, so this is not final.
          */
-        if (is_pixel_lit(p, idx - dwidth) || is_pixel_lit(p, idx - dwidth - 2) || is_pixel_lit(p, idx - dwidth + 2) ||
+        if (is_pixel_lit(p, idx - dw) || is_pixel_lit(p, idx - dw - 2) || is_pixel_lit(p, idx - dw + 2) ||
             is_pixel_lit(p, idx - 2)) {
             continue;
         }
@@ -168,9 +160,8 @@ void bit_accumulator(u_int x, u_int y) {
     D(print_buf_byte_state());
 
     if (buf_byte_counter++ == sizeof(buf_byte) * CHAR_BIT - 1u) {
-        bytes++;
         spawn_byte(buf_byte);
-//        buf_byte = 0u;
+        bytes++;
         buf_byte_counter = 0u;
     }
 }
@@ -211,28 +202,45 @@ void process_image_sha512_non_blank_frames(const u_int8_t *p, u_int size) {
 
 
 static void print_perf_stats(void) {
-    gettimeofday(&checkpoint, NULL);
-    double time_spent = (double) (checkpoint.tv_usec - start.tv_usec) / 1.0e6 +
-                        (double) (checkpoint.tv_sec - start.tv_sec);
-    printf("Time: %d, FPS: %f, BPM: %f\n",
+    struct timeval bpm_checkpoint, time_diff;
+    gettimeofday(&bpm_checkpoint, NULL);
+    timersub(&bpm_checkpoint, &start_time, &time_diff);
+    float time_spent = (float) time_diff.tv_sec + (float) time_diff.tv_usec / 1.0e6f;
+    printf("Time: %d, FPS: %f, bytes: %lu, BPM: %f\n",
            (int) time_spent,
-           ((double) frame_number) / time_spent,
+           fps_rolling_average(),
+           bytes,
            ((double) bytes) / (time_spent / 60));
+}
+
+float fps_rolling_average() {
+    float sum = 0u;
+    D(printf("Frame durations rolling buffer: "));
+    for (int j = 0; j < FPS_BUFFER_SIZE; j++) {
+        D(printf("%d, ", fps_buffer[j]));
+        sum += fps_buffer[j];
+    }
+    float avg_frame_time = sum / FPS_BUFFER_SIZE;
+    D(printf("\nAVG frame time: %fns\n", avg_frame_time));
+    return 1.0e6f / avg_frame_time;
 }
 
 static void main_loop(void) {
 
+    struct timeval frame_start, frame_end, frame_duration;
+
     for (;;) {
+        gettimeofday(&frame_start, NULL);
         fd_set fds;
         struct timeval tv;
         int r;
 
         FD_ZERO(&fds);
-        FD_SET(device, &fds);
+        FD_SET(device, &fds); // NOLINT(hicpp-signed-bitwise)
 
         /* Timeout. */
-        tv.tv_sec = 2;
-        tv.tv_usec = 0;
+        tv.tv_sec = 0;
+        tv.tv_usec = 700000;
 
         r = select(device + 1, &fds, NULL, NULL, &tv);
 
@@ -251,6 +259,10 @@ static void main_loop(void) {
             fprintf(stderr, "recording error\n");
             break;
         }
+
+        gettimeofday(&frame_end, NULL);
+        timersub(&frame_end, &frame_start, &frame_duration);
+        fps_buffer[fps_buffer_idx++ % FPS_BUFFER_SIZE] = frame_duration.tv_sec * 1e6 + frame_duration.tv_usec;
     }
 }
 
@@ -266,17 +278,17 @@ int main(int argc, char **argv) {
     (void) argc;
 
     populate_settings(argc, argv);
-
     // Avoid division by zero
     assert(settings.width > 2);
     assert(settings.height > 2);
 
+    // FPS and other stats initialization
+    gettimeofday(&start_time, NULL);
+    fps_buffer = (u_int *) calloc(FPS_BUFFER_SIZE, sizeof(fps_buffer[0]));
     signal(SIGUSR1, signal_usr1_handler);
 
     out_file = fopen(settings.file_out_name, "ab");
     stat_file = fopen(settings.file_hitlog_name, "a");
-
-    gettimeofday(&start, NULL);
 
     open_device();
     init_device();
@@ -287,6 +299,7 @@ int main(int argc, char **argv) {
     close_device();
 
     fclose(out_file);
+    free(fps_buffer);
 
     fprintf(stderr, "\n");
     return EXIT_SUCCESS;

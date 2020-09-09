@@ -28,4 +28,8 @@ void bit_accumulator(u_int x, u_int y);
 
 void print_buf_byte_state(void);
 
+float fps_rolling_average();
+
+#define FPS_BUFFER_SIZE 16 // must be a multiple of 8
+
 #endif //ALPHARAD_ALPHARAD_H

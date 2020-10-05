@@ -7,36 +7,61 @@ hits marked as just white)
 
 Can be ran as cron job to take occasional snapshots.
 """
+import argparse
+
 import numpy as np
 from PIL import Image
 
-# Hardcoded to debug borderline pixels behavior and other possible artifacts
-width = 640
-height = 480
-
-data = np.zeros((height, width, 3), dtype=np.uint8)
+settings = None
+data = None
 numpoints = 0
 
-with open('../points.log', 'r') as f:
-    for line in f:
-        line = line.strip()
-        if not line:
-            continue
-        coords = line.split(':')
-        x = int(coords[0])
-        y = int(coords[1])
-        # Grayscale, 0 + 3 grades
-        data[y, x] = [min(component + 85, 255) for component in data[y, x]]
-        numpoints += 1
 
-img = Image.fromarray(data)
-img.save('vis_gray_{:08d}_hits.png'.format(numpoints))
+def init_arg_parser():
+    ap = argparse.ArgumentParser(
+        description='Reads points log file draws scatter plots')
+    ap.add_argument('-p', '--points', default='../points.log', metavar='POINTS_LOG',
+                    type=argparse.FileType('r'),
+                    help='read hit coordinates from POINTS_LOG')
+    ap.add_argument('--width', type=int, default=640,
+                    help='plot width')
+    ap.add_argument('--height', type=int, default=480,
+                    help='plot height')
+    return ap
 
-# Transform data, each pixel becomes either hit or not
-it = np.nditer(data, flags=['multi_index'], op_flags=['readwrite'])
-while not it.finished:
-    data[it.multi_index] = 0 if data[it.multi_index] == 0 else 255
-    it.iternext()
 
-img = Image.fromarray(data)
-img.save('vis_bw_{:08d}_hits.png'.format(numpoints))
+def plot():
+    img = Image.fromarray(data)
+    img.save('vis_gray_{:08d}_hits.png'.format(numpoints))
+
+    # Transform data, each pixel becomes either hit or not
+    it = np.nditer(data, flags=['multi_index'], op_flags=['readwrite'])
+    while not it.finished:
+        data[it.multi_index] = 0 if data[it.multi_index] == 0 else 255
+        it.iternext()
+
+    img = Image.fromarray(data)
+    img.save('vis_bw_{:08d}_hits.png'.format(numpoints))
+
+
+def read_data():
+    global numpoints
+    global data
+    data = np.zeros((settings.height, settings.width, 3), dtype=np.uint8)
+    with settings.points as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+            coords = line.split(':')
+            x = int(coords[0])
+            y = int(coords[1])
+            # Grayscale, 0 + 3 grades
+            data[y, x] = [min(component + 85, 255) for component in data[y, x]]
+            numpoints += 1
+
+
+if __name__ == "__main__":
+    settings = init_arg_parser().parse_args()
+    read_data()
+    plot()

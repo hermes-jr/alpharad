@@ -1,8 +1,9 @@
 #!/bin/bash
 
-threads=10
+threads=12
 # Modify to balance speed vs detail
-batch_size=256
+batch_size=512
+#export MPLBACKEND="ps"
 
 total_points=$(wc -l ../points.log | cut -d' ' -f1)
 let leap=${batch_size}*${threads}
@@ -28,8 +29,8 @@ do
 			printf "Thread %2d: Line %d/%d: %5.2f%%\n" ${cur_thread} ${n} ${total_points} $(echo "scale=2; 100*${n}/${total_points}" | bc)
 		    head -n $n ../points.log > "${points_file}"
 			head -c $((${n}/8)) ../out.dat > "${data_file}"
-#			python3 coords-to-scatter.py
-			python3 plot-data.py --data ${data_file} --points ${points_file} -v
+			python3 -O coords-to-scatter.py --points ${points_file}
+			python3 -O plot-data.py --data ${data_file} --points ${points_file}
 		done
 	}&
 done

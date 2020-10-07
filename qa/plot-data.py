@@ -9,6 +9,7 @@ Build distribution of byte frequencies plot.
 """
 import argparse
 
+from matplotlib import patches
 from matplotlib.ticker import FormatStrFormatter
 
 try:
@@ -21,6 +22,8 @@ import matplotlib.pyplot as plt
 
 settings = None
 xs, ys, as_bytes = [], [], []
+WIDTH, HEIGHT = 640, 480
+counter = [[0] * HEIGHT] * WIDTH
 title = 'alpharad plot'
 colors = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow']
 
@@ -38,8 +41,11 @@ def read_data():
             if not line:
                 continue
             coords = line.split(':')
-            xs.append(int(coords[0]))
-            ys.append(int(coords[1]))
+            x = int(coords[0])
+            xs.append(x)
+            y = int(coords[1])
+            ys.append(y)
+            counter[x][y] += 1
     v_print("Points read: {}".format(len(xs)))
 
     with settings.data as f:
@@ -64,6 +70,8 @@ def init_arg_parser():
                     help='read hit coordinates from POINTS_LOG')
     ap.add_argument('--stats', action='store_true',
                     help='calculate and display data statistics after processing')
+    ap.add_argument('--segments', action='store_true',
+                    help='show rectangles overlay in scatter')
     ap.add_argument('--window', action='store_true',
                     help='display plot window. Default: write output to file')
     ap.add_argument('-v', '--verbose', action='store_true',
@@ -82,23 +90,34 @@ def plot():
     gs01 = gs0[1].subgridspec(3, 1)
 
     fig.add_subplot(gs00[0, 0])
-    plt.title("Hits - big markers")
-    plt.scatter(xs, ys, marker='.', alpha=0.33, edgecolors='none',
-                c=(tuple(colors[i % len(colors)] for i in range(len(xs))))
-                )
+    plt.title("Hits - histogram")
+    plt.hist2d(xs, ys, bins=[(max(xs) - min(xs)) // 4, (max(ys) - min(ys)) // 4], density=True)
 
     fig.add_subplot(gs00[1, 0])
     plt.title("Hits - small markers")
     plt.scatter(xs, ys, marker=',', s=1, alpha=0.33, edgecolors='none', snap=False, lw=1)
 
+    if settings.segments:
+        # limit the number of segments to 50 (thus the 100 points limit)
+        for idx in range(1, min(len(xs), 100), 2):
+            x1 = xs[idx - 1]
+            x2 = xs[idx]
+            y1 = ys[idx - 1]
+            y2 = ys[idx]
+
+            w = abs(x2 - x1)
+            h = abs(y2 - y1)
+            rect = patches.Rectangle((min(x2, x1), min(y2, y1)), w, h, facecolor=(0, 1.0, 0, 0.25))
+            plt.gca().add_patch(rect)
+
     fig.add_subplot(gs01[0, 0])
     plt.title("Xs distribution")
-    plt.hist(xs, bins=640, snap=False, aa=False)
+    plt.hist(xs, bins=WIDTH, snap=False, aa=False)
     plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%6d'))
 
     fig.add_subplot(gs01[1, 0])
     plt.title("Ys distribution")
-    plt.hist(ys, bins=480, snap=False, aa=False)
+    plt.hist(ys, bins=HEIGHT, snap=False, aa=False)
     plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%6d'))
 
     fig.add_subplot(gs01[2, 0])

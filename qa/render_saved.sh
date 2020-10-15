@@ -29,8 +29,8 @@ do
 			printf "Thread %2d: Line %d/%d: %5.2f%%\n" ${cur_thread} ${n} ${total_points} $(echo "scale=2; 100*${n}/${total_points}" | bc)
 		    head -n $n ../points.log > "${points_file}"
 			head -c $((${n}/8)) ../out.dat > "${data_file}"
-			python3 -O coords-to-scatter.py --points ${points_file}
-			python3 -O plot-data.py --data ${data_file} --points ${points_file}
+			python3 -O coords_to_scatter.py --points ${points_file}
+			python3 -O plot_data.py --data ${data_file} --points ${points_file}
 		done
 	}&
 done

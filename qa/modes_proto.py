@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import hashlib
+import math
 
 import numpy as np
-from scipy import stats
 
 points = []
 
@@ -77,41 +77,23 @@ def m_compare_first_try():
 
 def m_sha():
     global points
-    hash_len = 64
-    hop_size = len(points) // 100
-    result = np.empty(len(points) * hash_len, dtype=np.dtype('b'))  # one hash per point
-    # result = np.empty(1_000_000, dtype=np.dtype('b'))  # limit with 1M of data to speedup
+    hash_len = 32
+
+    # One hash per point, limit to 1M of data to speedup
+    result = np.empty(min(len(points) * hash_len, 1_000_000), dtype=np.dtype('b'))
     offset = 0
-    for i, (x, y) in enumerate(points):
-        # Emulate thermal noise
-        frame = np.random.randint(-128, -90, width * height * 2, np.dtype('b'))  # dark noisy pixels
-        frame[(y * width + x) * 2] = np.random.randint(120, 127)  # flash
-        h = hashlib.sha512(bytes(frame))
+    for i in range(min(len(points), 1_000_000 // hash_len)):
+        x, y = points[i]
+
+        # Dark noisy pixels (thermal noise emulation)
+        frame = np.random.randint(-128, -90, width * height * 2, np.dtype('b'))
+
+        # Flash
+        frame[(y * width + x) * 2] = np.random.randint(120, 127)
+
+        h = hashlib.sha256(bytes(frame))
         np.put(result, range(offset, offset + hash_len), list(bytearray(h.digest())))
-        if i % hop_size == 0:
-            print('{}% done'.format(i / hop_size))
         offset += hash_len
-        # if offset >= 1_000_000:
-        #     break
-    return result
-
-
-def m_segments():
-    result = []
-    s1 = None
-    for x, y in points:
-        if not s1:
-            s1 = (x, y)
-            continue
-        x1, y1 = s1
-        s1 = None
-        # todo: maintain a summed area table and compute integral here instead of calculating area
-        area = abs(x - x1) * abs(y - y1)
-        result.append(int((area / (width * height)) * 255))
-
-    print("area stats: {}\n".format(
-        stats.describe(result))
-    )
     return result
 
 
@@ -167,6 +149,75 @@ def m_box_muller():
     return result
 
 
+def m_quantile():
+    xs_count = [0] * width
+    ys_count = [0] * height
+    xs_total, ys_total = 0, 0
+    result = []
+    sq = True
+    for x, y in points:
+        xs_total += 1
+        xs_count[x] += 1
+        xfq = sum(xs_count[k] for k in range(x + 1)) / xs_total
+
+        ys_total += 1
+        ys_count[y] += 1
+        yfq = sum(ys_count[k] for k in range(y + 1)) / ys_total
+
+        # Accumulate statistics data first
+        if xs_total < 10_000:
+            continue
+
+        # Equalize the chances in byte conversion, eliminate smaller segments around 0.0 and 1.0
+        # Simple flooring/ceiling would make some values to be 1.5 times frequent than others, round robin helps
+        if sq:
+            x_conv = math.floor(257 * xfq) - 1
+            y_conv = math.ceil(257 * yfq) - 1
+        else:
+            x_conv = math.ceil(257 * xfq) - 1
+            y_conv = math.floor(257 * yfq) - 1
+        sq ^= True
+
+        # Discard less frequent values
+        if 0 <= x_conv <= 255:
+            result.append(x_conv)
+        if 0 <= y_conv <= 255:
+            result.append(y_conv)
+    return result
+
+
+def m_quantile_and_compare():
+    xs_count = [0] * width
+    ys_count = [0] * height
+    xs_total, ys_total = 0, 0
+    result = []
+    buf_byte = 0
+    bits = 0
+    for x, y in points:
+        xs_total += 1
+        xs_count[x] += 1
+        xfq = sum(xs_count[k] for k in range(x + 1)) / xs_total
+
+        ys_total += 1
+        ys_count[y] += 1
+        yfq = sum(ys_count[k] for k in range(y + 1)) / ys_total
+
+        if xs_total < 10_000:
+            continue
+
+        buf_byte <<= 1
+        if xfq < yfq:
+            buf_byte |= 1
+        bits += 1
+
+        if bits == 8:
+            result.append(buf_byte)
+            buf_byte = 0
+            bits = 0
+
+    return result
+
+
 def save_result(name, method):
     body = bytes(method())
     out_file = open('../out-{}.dat'.format(name), 'wb')
@@ -180,9 +231,11 @@ if __name__ == "__main__":
     methods = [
         m_compare_per_frame,
         m_compare_first_try,
-        # m_sha,
-        # m_segments,
-        m_box_muller
+        m_sha,
+        m_box_muller,
+        m_quantile,
+        m_quantile_and_compare,
     ]
     for v in methods:
+        print("Calculating", v.__name__)
         save_result(v.__name__, v)

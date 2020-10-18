@@ -5,6 +5,7 @@ import math
 import numpy as np
 
 points = []
+xqf_sim, yqf_sim = None, None
 
 width = 640
 height = 480
@@ -22,6 +23,9 @@ def get_data():
 
 
 def m_compare_per_frame():
+    """
+    :return: 1 byte every 16 frames
+    """
     global points
     result = []
     buf_byte = 0
@@ -53,6 +57,10 @@ def m_compare_per_frame():
 
 
 def m_compare_first_try():
+    """
+    The very first attempt
+    :return:  1 byte every 8 frames
+    """
     global points
     result = []
     buf_byte = 0
@@ -76,6 +84,14 @@ def m_compare_first_try():
 
 
 def m_sha():
+    """
+    When we detect a flash, we feed the whole frame state to sha256 function. Thus, we guarantee that at least
+    one pixel at truly random position is lit, which in turn means that the whole hash is unpredictable.
+    Thermal noise of other dark pixels adds entropy.
+
+    :return: 32 bytes per frame that contains at least one flash
+    (for the purposes of this script it is safe to assume that each frame contains only a single flash)
+    """
     global points
     hash_len = 32
 
@@ -149,6 +165,18 @@ def m_box_muller():
     return result
 
 
+def emulate_quantile_function(values, buckets):
+    values_count = [0] * buckets
+    result = [0.0] * buckets
+    # Count frequencies for numbers in a sequence
+    for pt in values:
+        values_count[pt] += 1
+    # For each value calculate the possibility of random number being lower or equal than this value
+    for pv in range(buckets):
+        result[pv] = sum(values_count[k] for k in range(pv + 1)) / len(values)
+    return result
+
+
 def m_quantile():
     xs_count = [0] * width
     ys_count = [0] * height
@@ -158,15 +186,16 @@ def m_quantile():
     for x, y in points:
         xs_total += 1
         xs_count[x] += 1
-        xfq = sum(xs_count[k] for k in range(x + 1)) / xs_total
 
         ys_total += 1
         ys_count[y] += 1
-        yfq = sum(ys_count[k] for k in range(y + 1)) / ys_total
 
         # Accumulate statistics data first
         if xs_total < 10_000:
             continue
+
+        xfq = sum(xs_count[k] for k in range(x + 1)) / xs_total
+        yfq = sum(ys_count[k] for k in range(y + 1)) / ys_total
 
         # Equalize the chances in byte conversion, eliminate smaller segments around 0.0 and 1.0
         # Simple flooring/ceiling would make some values to be 1.5 times frequent than others, round robin helps
@@ -183,30 +212,54 @@ def m_quantile():
             result.append(x_conv)
         if 0 <= y_conv <= 255:
             result.append(y_conv)
+
+    return result
+
+
+def m_quantile_viktor():
+    """
+    Convert distribution to uniform, each coordinate spawns 4 bits
+
+    Exchanging data quantity for quality
+
+    :return: 1 byte per registered flash
+    """
+    result = []
+    sq = True
+    for x, y in points:
+        x_chance = xqf_sim[x]
+        y_chance = yqf_sim[y]
+
+        # Spawn two halves of byte
+        if sq:
+            x_conv = math.floor(17 * x_chance) - 1
+            y_conv = math.ceil(17 * y_chance) - 1
+        else:
+            x_conv = math.ceil(17 * x_chance) - 1
+            y_conv = math.floor(17 * y_chance) - 1
+        sq ^= True
+        if 0 <= x_conv <= 15 and 0 <= y_conv <= 15:
+            byte = x_conv << 4
+            byte += y_conv
+            result.append(byte)
     return result
 
 
 def m_quantile_and_compare():
-    xs_count = [0] * width
-    ys_count = [0] * height
-    xs_total, ys_total = 0, 0
+    """
+    Same logic as in m_compare_first_try
+
+    :return: 1 byte every 8 flashes
+    """
     result = []
     buf_byte = 0
     bits = 0
     for x, y in points:
-        xs_total += 1
-        xs_count[x] += 1
-        xfq = sum(xs_count[k] for k in range(x + 1)) / xs_total
-
-        ys_total += 1
-        ys_count[y] += 1
-        yfq = sum(ys_count[k] for k in range(y + 1)) / ys_total
-
-        if xs_total < 10_000:
-            continue
+        x_chance = xqf_sim[x]
+        y_chance = yqf_sim[y]
 
         buf_byte <<= 1
-        if xfq < yfq:
+        if x_chance < y_chance:
             buf_byte |= 1
         bits += 1
 
@@ -220,7 +273,7 @@ def m_quantile_and_compare():
 
 def save_result(name, method):
     body = bytes(method())
-    out_file = open('../out-{}.dat'.format(name), 'wb')
+    out_file = open('../out_{}.dat'.format(name), 'wb')
     out_file.write(body)
     out_file.close()
 
@@ -228,13 +281,17 @@ def save_result(name, method):
 if __name__ == "__main__":
     get_data()
 
+    xqf_sim = emulate_quantile_function(list(x for x, y in points), width)
+    yqf_sim = emulate_quantile_function(list(y for x, y in points), height)
+
     methods = [
         m_compare_per_frame,
         m_compare_first_try,
-        m_sha,
-        m_box_muller,
         m_quantile,
         m_quantile_and_compare,
+        m_quantile_viktor,
+        m_box_muller,
+        m_sha,
     ]
     for v in methods:
         print("Calculating", v.__name__)

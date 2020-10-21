@@ -52,11 +52,11 @@ bool is_pixel_lit(const u_int8_t *p, u_int idx) { return p[idx] > settings.thres
 void process_image(const u_int8_t *p, u_int size) {
     switch (settings.frame_processor) {
 #if HAVE_OPENSSL
-        case PROC_SHA512_NON_BLANK_FRAMES_ONLY:
-            process_image_sha512_non_blank_frames(p, size);
+        case PROC_SHA256_NON_BLANK_FRAMES_ONLY:
+            process_image_sha256_non_blank_frames(p, size);
             break;
-        case PROC_SHA512_ALL_FRAMES:
-            process_image_sha512_all_frames(p, size);
+        case PROC_SHA256_ALL_FRAMES:
+            process_image_sha256_all_frames(p, size);
             break;
 #endif //HAVE_OPENSSL
         case PROC_COMPARATOR:
@@ -93,10 +93,11 @@ void process_image_default(const u_int8_t *p, u_int size) {
          * Only a few flashes have radius more than 2.
          * Might be an issue on higher resolutions though, so this is not final.
          */
-        if (is_pixel_lit(p, idx - dw) || is_pixel_lit(p, idx - dw - 2) || is_pixel_lit(p, idx - dw + 2) ||
-            is_pixel_lit(p, idx - 2)) {
-            continue;
-        }
+        // FIXME: temporarily disabled, registering everything. Waiting for alpharadcamerastage2-10 to be resolved
+//        if (is_pixel_lit(p, idx - dw) || is_pixel_lit(p, idx - dw - 2) || is_pixel_lit(p, idx - dw + 2) ||
+//            is_pixel_lit(p, idx - 2)) {
+//            continue;
+//        }
 
         D(printf("Flash at %3d:%3d; %d / %d\n", x, y, idx, size));
         uint8_t coord_as_byte = round(
@@ -176,24 +177,24 @@ void print_buf_byte_state(void) {
 
 #if HAVE_OPENSSL
 
-void process_image_sha512_all_frames(const u_int8_t *p, u_int size) {
-    u_char hash[SHA512_DIGEST_LENGTH];
-    SHA512(p, size, hash);
-    bytes += SHA512_DIGEST_LENGTH;
-    fwrite(hash, 1, SHA512_DIGEST_LENGTH, out_file);
+void process_image_sha256_all_frames(const u_int8_t *p, u_int size) {
+    u_char hash[SHA256_DIGEST_LENGTH];
+    SHA256(p, size, hash);
+    bytes += SHA256_DIGEST_LENGTH;
+    fwrite(hash, 1, SHA256_DIGEST_LENGTH, out_file);
     fflush(out_file);
 }
 
-void process_image_sha512_non_blank_frames(const u_int8_t *p, u_int size) {
+void process_image_sha256_non_blank_frames(const u_int8_t *p, u_int size) {
     for (u_int idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) {
             // We're on black, skip to next pixel
             continue;
         }
-        u_char hash[SHA512_DIGEST_LENGTH];
-        SHA512(p, size, hash);
-        bytes += SHA512_DIGEST_LENGTH;
-        fwrite(hash, 1, SHA512_DIGEST_LENGTH, out_file);
+        u_char hash[SHA256_DIGEST_LENGTH];
+        SHA256(p, size, hash);
+        bytes += SHA256_DIGEST_LENGTH;
+        fwrite(hash, 1, SHA256_DIGEST_LENGTH, out_file);
         fflush(out_file);
     }
 }

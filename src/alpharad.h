@@ -18,9 +18,9 @@ void process_image_comparator(const u_int8_t *p, u_int size);
 
 #if HAVE_OPENSSL
 
-void process_image_sha512_non_blank_frames(const u_int8_t *p, u_int size);
+void process_image_sha256_non_blank_frames(const u_int8_t *p, u_int size);
 
-void process_image_sha512_all_frames(const u_int8_t *p, u_int size);
+void process_image_sha256_all_frames(const u_int8_t *p, u_int size);
 
 #endif //HAVE_OPENSSL
 

@@ -139,5 +139,5 @@ if __name__ == "__main__":
 
     clean = cleanup_attempt(sc)
     print('Cleaned up list:')
-    for x, y in clean:
-        print('{}:{}'.format(x, y))
+    for p in clean:
+        print('{}:{}'.format(p[0], p[1]))

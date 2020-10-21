@@ -71,14 +71,15 @@ def analyze_groups(groups):
     """
     coll = dict()
 
+    print('Normalized:')
     for g in groups:
         min_x = min(x for x, _ in g)
         min_y = min(y for _, y in g)
         g_norm = tuple(sorted(((x - min_x, y - min_y) for x, y in g)))
-        print('normalized:', g_norm)
+        print(g_norm)
         coll[g_norm] = coll.get(g_norm, 0) + 1
 
-    print('Patterns in order of descending frequency of appearance')
+    print('Patterns in order of descending frequency of appearance:')
     for coordinates, pattern_count in sorted(coll.items(), key=lambda item: item[1], reverse=True):
         print('\n==============\n')
 
@@ -96,20 +97,35 @@ def analyze_groups(groups):
             else:
                 print('')
 
-    print(len(coll))
+    print('Total groups: {}\n'.format(len(coll)))
 
 
 def print_with_connections():
     for k, (x, y) in enumerate(rd):
-        print('{}:{}'.format(x, y))
+        print('* {}:{}'.format(x, y))
         if k < len(cc):
             print('|' if cc[k] else ' ')
+
+
+def cleanup_attempt(groups):
+    """
+    Use some strategy to get rid of clusters, yet leaving the resulting numbers acceptably distributed
+
+    :param groups: all groups of points
+    """
+    cleaned_up = []
+    ctr = 0
+    for g in groups:
+        lucky = g[ctr % len(g)]
+        cleaned_up.append(lucky)
+        ctr = max(ctr + 1, 0)  # signed
+    return cleaned_up
 
 
 if __name__ == "__main__":
     # Read file
     rd = read_data()
-    print('{} points read'.format(len(rd)))
+    print('{} points read:\n'.format(len(rd)))
 
     # Detect connected pixels
     cc = find_connections(rd)
@@ -117,7 +133,11 @@ if __name__ == "__main__":
 
     # Split them into groups
     sc = split_connections(cc, rd)
-    print(sc)
 
     # Analyze groups, print stats
     analyze_groups(sc)
+
+    clean = cleanup_attempt(sc)
+    print('Cleaned up list:')
+    for x, y in clean:
+        print('{}:{}'.format(x, y))

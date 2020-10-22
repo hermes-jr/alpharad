@@ -1,6 +1,11 @@
 enable_testing()
 
-add_executable(tests_runner tests_runner.c ../settings.c test_settings.c test_settings.h ../frame_processors.c ../frame_processors.h test_playground.c test_playground.h)
+add_executable(tests_runner tests_runner.c ../settings.c
+        test_settings.c test_settings.h
+        ../data_extractors.c ../data_extractors.h
+        test_image_processing.c test_image_processing.h
+        test_playground.c test_playground.h
+        )
 
 target_link_libraries(tests_runner PRIVATE cunit)
 

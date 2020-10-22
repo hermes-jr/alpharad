@@ -3,6 +3,12 @@
 
 #include <stdlib.h>
 
+#ifdef DEBUG
+#  define D(x) (x)
+#else
+#  define D(x) do{}while(0)
+#endif //DEBUG
+
 enum frame_processor {
     PROC_DEFAULT,
     PROC_COMPARATOR,

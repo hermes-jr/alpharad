@@ -1,5 +1,6 @@
 #include <CUnit/Basic.h>
 #include "test_settings.h"
+#include "test_image_processing.h"
 #include "test_playground.h"
 
 int main(int argc, char **argv) {
@@ -22,6 +23,16 @@ int main(int argc, char **argv) {
             CU_TEST_INFO_NULL
     };
 
+    CU_TestInfo image_processing_suite_tests[] = {
+            {"Image processor should yield proper representatives with CCL", test_image_ccl},
+            CU_TEST_INFO_NULL
+    };
+
+    CU_TestInfo data_extraction_suite_tests[] = {
+//            {"Comparator", test_data_comparator},
+            CU_TEST_INFO_NULL
+    };
+
     CU_TestInfo playground_suite_tests[] = {
             {"Int overflow rotation", test_playground_overflow_rotation},
             CU_TEST_INFO_NULL
@@ -30,6 +41,8 @@ int main(int argc, char **argv) {
     // Suites
     CU_SuiteInfo suites[] = {
             {"Settings suite", NULL, NULL, NULL, NULL, settings_suite_tests},
+            {"Image processing suite", NULL, NULL, NULL, NULL, image_processing_suite_tests},
+            {"Data extraction suite", NULL, NULL, NULL, NULL, data_extraction_suite_tests},
             {"Playground suite", NULL, NULL, NULL, NULL, playground_suite_tests},
 //            { "suitename2", suite2_init-func, suite2_cleanup_func, test_array2 },
             CU_SUITE_INFO_NULL

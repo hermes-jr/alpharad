@@ -21,7 +21,7 @@
 #include "v4l2_util.h"
 
 extern struct settings settings;
-static u_int8_t n_buffers;
+static uint8_t n_buffers;
 static struct buffer *buffers;
 static int frame_number;
 extern int device;
@@ -36,7 +36,7 @@ int xioctl(int dev, int request, void *arg) {
     return r;
 }
 
-int read_frame(void (*callback)(const u_int8_t *p, u_int size)) {
+int read_frame(void (*callback)(const uint8_t *p, uint size)) {
     struct v4l2_buffer buf;
 
     CLEAR(buf);

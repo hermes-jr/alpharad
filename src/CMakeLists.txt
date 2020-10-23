@@ -1,4 +1,4 @@
-add_executable(${PROJECT_NAME} alpharad.c settings.c data_extractors.c data_extractors.h)
+add_executable(${PROJECT_NAME} alpharad.c settings.c dto.h frame_cca.c frame_cca.h data_extractors.c data_extractors.h)
 
 add_library(v4l2_util v4l2_util.c settings.c)
 target_link_libraries(${PROJECT_NAME} PRIVATE v4l2_util m)

@@ -12,13 +12,12 @@
 #endif //HAVE_OPENSSL
 
 static uint8_t buf_byte;
-static u_long bytes = 0;
 
 extern struct settings settings;
 
-bytes_spawned process_image_default(const u_int8_t *p, u_int size) {
+bytes_spawned process_image_default(const uint8_t *p, uint size) {
     bytes_spawned result = {0, NULL};
-    const u_int dw = settings.width * 2;
+    const uint dw = settings.width * 2;
 
     points_detected points = get_all_flashes(p, size, false);
 
@@ -26,11 +25,11 @@ bytes_spawned process_image_default(const u_int8_t *p, u_int size) {
         return result;
     }
 
-    for (u_int idx = 0; idx < points.len; idx++) {
-        u_int cp = points.arr[idx];
+    for (uint idx = 0; idx < points.len; idx++) {
+        uint cp = points.arr[idx];
 
-        u_int x = (cp % dw) / 2;
-        u_int y = cp / dw;
+        uint x = (cp % dw) / 2;
+        uint y = cp / dw;
 
         if (x == 0 || y == 0 || x + 1 == settings.width || y + 1 == settings.height) {
             // Skip borders, they behave weirdly
@@ -53,25 +52,26 @@ bytes_spawned process_image_default(const u_int8_t *p, u_int size) {
         D(printf("Flash at %3d:%3d; %d / %d\n", x, y, idx, size));
         uint8_t coord_as_byte = round(
                 ((double) idx / (size - settings.width * 2 - settings.height * 2 - 1)) * UINT8_MAX);
-        spawn_byte(coord_as_byte);
+//        spawn_byte(coord_as_byte);
         bytes++;
         D(printf("Flash at %3d:%3d, generated: %3d\n", x, y, coord_as_byte));
 
-        log_flash_at_coordinates(x, y);
+//        log_flash_at_coordinates(x, y);
     }
+    return result;
 }
 
-bytes_spawned process_image_comparator(const u_int8_t *p, u_int size) {
-    const u_int dw = settings.width * 2;
+bytes_spawned process_image_comparator(const uint8_t *p, uint size) {
+    const uint dw = settings.width * 2;
 
-    for (u_int idx = 0; idx < size; idx += 2) {
+    for (uint idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) {
             // We're on black, skip to next pixel
             continue;
         }
 
-        u_int x = (idx % dw) / 2;
-        u_int y = idx / dw;
+        uint x = (idx % dw) / 2;
+        uint y = idx / dw;
 
         if (x == 0 || y == 0 || x + 1 == settings.width || y + 1 == settings.height) {
             // Skip borders, they behave weirdly
@@ -90,10 +90,12 @@ bytes_spawned process_image_comparator(const u_int8_t *p, u_int size) {
             continue;
         }
 
-        bit_accumulator(x, y);
+//        bit_accumulator(x, y);
 
-        log_flash_at_coordinates(x, y);
+//        log_flash_at_coordinates(x, y);
     }
+    bytes_spawned result = {0, NULL};
+    return result;
 }
 
 bool bit_accumulator(bool bit, uint8_t *ret) {
@@ -126,17 +128,18 @@ void print_buf_byte_state(ushort buf_byte_counter) {
 
 #if HAVE_OPENSSL
 
-bytes_spawned process_image_sha256_all_frames(const u_int8_t *p, u_int size) {
+bytes_spawned process_image_sha256_all_frames(const uint8_t *p, uint size) {
     u_char hash[SHA256_DIGEST_LENGTH];
     SHA256(p, size, hash);
     bytes += SHA256_DIGEST_LENGTH;
-    bytes_spawned result;
-    fwrite(hash, 1, SHA256_DIGEST_LENGTH, out_file);
-    fflush(out_file);
+//    fwrite(hash, 1, SHA256_DIGEST_LENGTH, out_file);
+//    fflush(out_file);
+    bytes_spawned result = {0, NULL};
+    return result;
 }
 
-bytes_spawned process_image_sha256_non_blank_frames(const u_int8_t *p, u_int size) {
-    for (u_int idx = 0; idx < size; idx += 2) {
+bytes_spawned process_image_sha256_non_blank_frames(const uint8_t *p, uint size) {
+    for (uint idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) {
             /* We're on black, skip to next pixel */
             continue;
@@ -144,9 +147,11 @@ bytes_spawned process_image_sha256_non_blank_frames(const u_int8_t *p, u_int siz
         u_char hash[SHA256_DIGEST_LENGTH];
         SHA256(p, size, hash);
         bytes += SHA256_DIGEST_LENGTH;
-        fwrite(hash, 1, SHA256_DIGEST_LENGTH, out_file);
-        fflush(out_file);
+//        fwrite(hash, 1, SHA256_DIGEST_LENGTH, out_file);
+//        fflush(out_file);
     }
+    bytes_spawned result = {0, NULL};
+    return result;
 }
 
 #endif //HAVE_OPENSSL

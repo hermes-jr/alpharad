@@ -15,13 +15,13 @@ extern struct settings settings;
 int device = -1;
 static struct timeval start_time;
 
-u_int *fps_buffer;
+uint *fps_buffer;
 uint8_t fps_buffer_idx = 0;
 
 FILE *out_file;
 FILE *stat_file;
 
-static void log_flash_at_coordinates(u_int x, u_int y) {
+static void log_flash_at_coordinates(uint x, uint y) {
     char z[32];
     snprintf(z, 32, "%d:%d\n", x, y);
     fputs(z, stat_file);
@@ -34,7 +34,7 @@ static void spawn_byte(uint8_t conv) {
     fflush(out_file);
 }
 
-void process_image(const u_int8_t *p, u_int size) {
+void process_image(const uint8_t *p, uint size) {
     switch (settings.frame_processor) {
 #if HAVE_OPENSSL
         case PROC_SHA256_NON_BLANK_FRAMES_ONLY:
@@ -138,11 +138,11 @@ int main(int argc, char **argv) {
 
     /* FPS and other stats initialization */
     gettimeofday(&start_time, NULL);
-    fps_buffer = (u_int *) calloc(FPS_BUFFER_SIZE, sizeof(fps_buffer[0]));
+    fps_buffer = (uint *) calloc(FPS_BUFFER_SIZE, sizeof(fps_buffer[0]));
     signal(SIGUSR1, signal_usr1_handler);
 
     out_file = fopen(settings.file_out_name, "ab");
-    stat_file = fopen(settings.file_hitlog_name, "a");
+    stat_file = fopen(settings.file_hits_name, "a");
 
     open_device();
     init_device();

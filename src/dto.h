@@ -3,11 +3,13 @@
 
 #include <stdint.h>
 
+/* Don't forget to free *arr after use! */
 typedef struct {
     uint len;
     uint8_t *arr;
 } bytes_spawned;
 
+/* Don't forget to free *arr after use! */
 typedef struct {
     uint len;
     uint *arr;

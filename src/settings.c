@@ -7,7 +7,7 @@
 struct settings settings = {
         .dev_name = "/dev/video0",
         .file_out_name = "out.dat",
-        .file_hitlog_name = "points.log",
+        .file_hits_name = "points.log",
         .frame_processor = PROC_DEFAULT,
         .width = 640,
         .height = 480,
@@ -17,15 +17,15 @@ struct settings settings = {
 
 static const struct option
         long_options[] = {
-        {"device",      required_argument, NULL, 'd'},
-        {"geometry",    required_argument, NULL, 'g'},
-        {"hitlog-file", required_argument, NULL, 'l'},
-        {"out-file",    required_argument, NULL, 'o'},
-        {"mode",        required_argument, NULL, 'm'},
-        {"list-modes",  no_argument,       NULL, 'M'},
-        {"verbose",     optional_argument, NULL, 'v'},
-        {"help",        no_argument,       NULL, 'h'},
-        {0, 0, 0,                                0}
+        {"device",     required_argument, NULL, 'd'},
+        {"geometry",   required_argument, NULL, 'g'},
+        {"hits-file",  required_argument, NULL, 'l'},
+        {"out-file",   required_argument, NULL, 'o'},
+        {"mode",       required_argument, NULL, 'm'},
+        {"list-modes", no_argument,       NULL, 'M'},
+        {"verbose",    optional_argument, NULL, 'v'},
+        {"help",       no_argument,       NULL, 'h'},
+        {0, 0, 0,                               0}
 };
 static const char short_options[] = "d:g:l:o:m:Mv:h";
 
@@ -35,8 +35,8 @@ void print_usage(char *self_name) {
             "Version %s\n\n"
             "Options:\n"
             "-d, --device=PATH             Video device PATH [%s]\n"
-            "-g, --geometry=WIDTHxHEIGHT   Frame dimensions [%dx%d]\n"
-            "-l, --hitlog-file=LOGFILE     Log detected flashes to LOGFILE. Disabled by default\n"
+            "-g, --geometry=WIDTH:HEIGHT   Frame dimensions [%d:%d]\n"
+            "-l, --hits-file=LOGFILE       Log detected flashes to LOGFILE. Disabled by default\n"
             "-o, --out-file=FILE           Write processed data to FILE [%s] \n"
             "-m, --mode=MODE               Set one of available modes\n"
             "-M, --list-modes              List currently supported modes\n"
@@ -68,21 +68,24 @@ void populate_settings(int argc, char **argv) {
                 break;
 
             case 'g': {
-                int bufsize = 31;
-                char provided_mode[bufsize + 1];
+                int buffer_size = 31;
+                char provided_mode[buffer_size + 1];
                 char *mode_token;
 
-                strncpy(provided_mode, optarg, bufsize);
-                provided_mode[bufsize] = '\0';
+                strncpy(provided_mode, optarg, buffer_size);
+                provided_mode[buffer_size] = '\0';
 
-                mode_token = strtok(provided_mode, "x");
+                char *delimiter = ":";
+                /* Get width */
+                mode_token = strtok(provided_mode, ":");
                 if (mode_token != NULL) {
                     settings.width = strtol(mode_token, NULL, 0);
                 } else {
                     printf("Couldn't parse width");
                     exit(EXIT_FAILURE);
                 }
-                mode_token = strtok(NULL, "x");
+                /* Get height */
+                mode_token = strtok(NULL, ":");
                 if (mode_token != NULL) {
                     settings.height = strtol(mode_token, NULL, 0);
                 } else {
@@ -94,7 +97,7 @@ void populate_settings(int argc, char **argv) {
             }
 
             case 'l':
-                settings.file_hitlog_name = optarg;
+                settings.file_hits_name = optarg;
                 break;
 
             case 'o':

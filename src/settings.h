@@ -2,6 +2,7 @@
 #define ALPHARAD_SETTINGS_H
 
 #include <stdlib.h>
+#include <stdint.h>
 
 #ifdef DEBUG
 #  define D(x) (x)
@@ -19,13 +20,13 @@ enum frame_processor {
 };
 
 struct settings {
-    u_int width;
-    u_int height;
-    u_int8_t threshold;
-    u_int8_t verbose;
+    uint width;
+    uint height;
+    uint8_t threshold;
+    uint8_t verbose;
     enum frame_processor frame_processor;
     char *dev_name;
-    char *file_hitlog_name;
+    char *file_hits_name;
     char *file_out_name;
 };
 

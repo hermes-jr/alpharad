@@ -24,6 +24,10 @@ int main(int argc, char **argv) {
     };
 
     CU_TestInfo image_processing_suite_tests[] = {
+            {"Image processor should return empty result with blank frame", test_image_empty},
+            {"Image processor should break early returning a single point if requested", test_image_return_single},
+            {"Image processor return multiple points if requested", test_image_return_multiple},
+            {"Image processor wrapper function test", test_image_wrapper},
             {"Image processor should yield proper representatives with CCL", test_image_ccl},
             CU_TEST_INFO_NULL
     };
@@ -41,10 +45,10 @@ int main(int argc, char **argv) {
     // Suites
     CU_SuiteInfo suites[] = {
             {"Settings suite", NULL, NULL, NULL, NULL, settings_suite_tests},
-            {"Image processing suite", NULL, NULL, NULL, NULL, image_processing_suite_tests},
+            {"Image processing suite", NULL, image_processing_suite_cleanup, image_processing_test_init, NULL,
+             image_processing_suite_tests},
             {"Data extraction suite", NULL, NULL, NULL, NULL, data_extraction_suite_tests},
             {"Playground suite", NULL, NULL, NULL, NULL, playground_suite_tests},
-//            { "suitename2", suite2_init-func, suite2_cleanup_func, test_array2 },
             CU_SUITE_INFO_NULL
     };
 

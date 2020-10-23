@@ -1,21 +1,32 @@
 #include "frame_cca.h"
 #include "settings.h"
+#include <stdio.h>
 
 extern struct settings settings;
 
-points_detected get_all_flashes(const u_int8_t *p, u_int size, bool stop_on_first) {
+/**
+ * Process frame and detect if there are any bright spots in it.
+ * Reduce big spots to a single coordinate.
+ * A representative is chosen by the means of round robin algorithm to provide some uniformity
+ *
+ * @param p frame raw data buffer
+ * @param size  frame buffer length
+ * @param stop_on_first will return as soon as first flash detected
+ * @return linked list of representatives of each group of connected pixels
+ */
+points_detected get_all_flashes(const uint8_t *p, uint size, bool stop_on_first) {
     points_detected result = {0, NULL};
 
-    const u_int dw = settings.width * 2;
+    const uint dw = settings.width * 2;
 
-    for (u_int idx = 0; idx < size; idx += 2) {
+    for (uint idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) {
             /* We're on black, skip */
             continue;
         }
 
-        u_int x = (idx % dw) / 2;
-        u_int y = idx / dw;
+        uint x = (idx % dw) / 2;
+        uint y = idx / dw;
 
         /* Skip borders, they behave weirdly in my particular camera */
         if (x == 0 || y == 0 || x + 1 == settings.width || y + 1 == settings.height) {
@@ -47,4 +58,21 @@ points_detected get_all_flashes(const u_int8_t *p, u_int size, bool stop_on_firs
     return result;
 }
 
-bool is_pixel_lit(const u_int8_t *p, u_int idx) { return p[idx] > settings.threshold; }
+/**
+ * Convenience only wrapper method
+ * @param p
+ * @param size
+ * @return true if any pixel is lit
+ */
+bool has_flashes(const uint8_t *p, uint size) {
+    points_detected result = get_all_flashes(p, size, true);
+    if (result.len > 0) {
+        free(result.arr);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+/* Return true if requested byte value is greater than settings.threshold */
+bool is_pixel_lit(const uint8_t *p, uint idx) { return p[idx] > settings.threshold; }

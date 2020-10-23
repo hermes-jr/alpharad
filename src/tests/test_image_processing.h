@@ -1,7 +1,10 @@
 #ifndef ALPHARAD_TEST_IMAGE_PROCESSING_H
 #define ALPHARAD_TEST_IMAGE_PROCESSING_H
 
-int image_processing_test_init(void);
+#include <stdlib.h>
+#include "../frame_cca.h"
+
+void image_processing_test_init(void);
 
 int image_processing_suite_cleanup(void);
 
@@ -14,5 +17,11 @@ void test_image_return_multiple(void);
 void test_image_wrapper(void);
 
 void test_image_empty(void);
+
+void test_image_ll(void);
+
+uint xy_to_yuv(uint x, uint y);
+
+void dump_list(node_t *head);
 
 #endif //ALPHARAD_TEST_IMAGE_PROCESSING_H

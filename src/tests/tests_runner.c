@@ -29,6 +29,7 @@ int main(int argc, char **argv) {
             {"Image processor return multiple points if requested", test_image_return_multiple},
             {"Image processor wrapper function test", test_image_wrapper},
             {"Image processor should yield proper representatives with CCL", test_image_ccl},
+            {"Duh, linked list, queue, whatever this is. Inventing the wheel", test_image_ll},
             CU_TEST_INFO_NULL
     };
 

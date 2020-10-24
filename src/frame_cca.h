@@ -31,4 +31,8 @@ void delete_list(node_t **head);
 
 uint get_item(node_t *head, uint n);
 
+uint check_visited(uint_fast16_t const *visited, uint idx);
+
+void mark_visited(uint_fast16_t *visited, uint idx);
+
 #endif //ALPHARAD_FRAME_CCA_H

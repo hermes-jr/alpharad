@@ -67,12 +67,12 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
     points_detected result = {0, NULL};
 
     const uint dw = settings.width * 2;
-    bool *visited = calloc(size, sizeof(bool));
+    uint_fast16_t *visited = calloc((size + 15) / 16, sizeof(uint_fast16_t));
 
     for (uint idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) {
             /* We're on black, skip */
-            visited[idx] = true;
+            mark_visited(visited, idx);
             continue;
         }
 
@@ -92,7 +92,7 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             return result;
         }
 
-        if (visited[idx]) { continue; }
+        if (check_visited(visited, idx)) { continue; }
 
         /* By this point we are at bright and non-visited pixel */
         node_t *queue = NULL;
@@ -103,7 +103,7 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             uint inner_idx = pop_item(&queue);
             uint cx = (inner_idx % dw) / 2;
             uint cy = inner_idx / dw;
-            visited[inner_idx] = true;
+            mark_visited(visited, inner_idx);
             if (!is_pixel_lit(p, inner_idx)) { continue; }
             D(printf("%d:%d, ", cx, cy));
             push_item(&current_batch, inner_idx);
@@ -113,28 +113,28 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             bool down = cy < settings.height - 1;
             bool left = cx > 1;
             bool right = cx < settings.width - 1;
-            if (down && !visited[inner_idx + dw]) {
+            if (down && !check_visited(visited, inner_idx + dw)) {
                 push_item(&queue, inner_idx + dw); // S
             }
-            if (down && right && !visited[inner_idx + dw + 2]) {
+            if (down && right && !check_visited(visited, inner_idx + dw + 2)) {
                 push_item(&queue, inner_idx + dw + 2); // SE
             }
-            if (down && left && !visited[inner_idx + dw - 2]) {
+            if (down && left && !check_visited(visited, inner_idx + dw - 2)) {
                 push_item(&queue, inner_idx + dw - 2); // SW
             }
-            if (up && !visited[inner_idx - dw]) {
+            if (up && !check_visited(visited, inner_idx - dw)) {
                 push_item(&queue, inner_idx - dw); // N
             }
-            if (up && right && !visited[inner_idx - dw + 2]) {
+            if (up && right && !check_visited(visited, inner_idx - dw + 2)) {
                 push_item(&queue, inner_idx - dw + 2); // NE
             }
-            if (up && left && !visited[inner_idx - dw - 2]) {
+            if (up && left && !check_visited(visited, inner_idx - dw - 2)) {
                 push_item(&queue, inner_idx - dw - 2); // NW
             }
-            if (left && !visited[inner_idx - 2]) {
+            if (left && !check_visited(visited, inner_idx - 2)) {
                 push_item(&queue, inner_idx - 2); // W
             }
-            if (right && !visited[inner_idx + 2]) {
+            if (right && !check_visited(visited, inner_idx + 2)) {
                 push_item(&queue, inner_idx + 2); // E
             }
 
@@ -149,6 +149,14 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
         delete_list(&current_batch);
     }
     return result;
+}
+
+inline void mark_visited(uint_fast16_t *visited, uint idx) {
+    visited[idx / 16] |= 1u << (idx % 16);
+}
+
+inline uint check_visited(uint_fast16_t const *visited, uint idx) {
+    return visited[idx / 16] & 1u << (idx % 16);
 }
 
 /**

@@ -96,16 +96,57 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
 
         /* By this point we are at bright and non-visited pixel */
         node_t *queue = NULL;
+        node_t *current_batch = NULL;
         push_item(&queue, idx);
+        D(printf("\nAnalyzing neighbors of %d:%d: { ", x, y));
         do {
-            uint z = pop_item(&queue);
-            printf("deq: %d\n", z);
+            uint inner_idx = pop_item(&queue);
+            uint cx = (inner_idx % dw) / 2;
+            uint cy = inner_idx / dw;
+            visited[inner_idx] = true;
+            if (!is_pixel_lit(p, inner_idx)) { continue; }
+            D(printf("%d:%d, ", cx, cy));
+            push_item(&current_batch, inner_idx);
+
+            /* Too lazy to optimize this crap. Maybe later */
+            bool up = cy > 1;
+            bool down = cy < settings.height - 1;
+            bool left = cx > 1;
+            bool right = cx < settings.width - 1;
+            if (down && !visited[inner_idx + dw]) {
+                push_item(&queue, inner_idx + dw); // S
+            }
+            if (down && right && !visited[inner_idx + dw + 2]) {
+                push_item(&queue, inner_idx + dw + 2); // SE
+            }
+            if (down && left && !visited[inner_idx + dw - 2]) {
+                push_item(&queue, inner_idx + dw - 2); // SW
+            }
+            if (up && !visited[inner_idx - dw]) {
+                push_item(&queue, inner_idx - dw); // N
+            }
+            if (up && right && !visited[inner_idx - dw + 2]) {
+                push_item(&queue, inner_idx - dw + 2); // NE
+            }
+            if (up && left && !visited[inner_idx - dw - 2]) {
+                push_item(&queue, inner_idx - dw - 2); // NW
+            }
+            if (left && !visited[inner_idx - 2]) {
+                push_item(&queue, inner_idx - 2); // W
+            }
+            if (right && !visited[inner_idx + 2]) {
+                push_item(&queue, inner_idx + 2); // E
+            }
+
         } while (queue != NULL);
+        D(printf("}\n"));
 
         /* We have a region now, select a representative with round-robin */
         result.len++;
         result.arr = realloc(result.arr, result.len);
-        result.arr[result.len - 1] = 1;// region[rr++];
+        result.arr[result.len - 1] = get_item(current_batch, 0); // FIXME: rr
+//        result.arr[result.len - 1] = 1;// region[rr++];
+        delete_list(&current_batch);
     }
     return result;
 }

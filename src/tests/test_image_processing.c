@@ -21,7 +21,7 @@ void image_processing_test_init(void) {
 
     /* Common test points */
     coord1 = settings.width * 2 + 2; // x=1 y=1
-    coord2 = settings.width * 2 + 4; // x=2 y=1
+    coord2 = settings.width * 2 + 6; // x=3 y=1
 }
 
 /* Free fake frame buffer */
@@ -106,7 +106,7 @@ void test_image_ll(void) {
     push_item(&queue, 5u);
     push_item(&queue, 1u);
 
-    dump_list(queue);
+    D(dump_list(queue));
 
     CU_ASSERT_EQUAL(get_item(queue, 0), 3u);
     CU_ASSERT_EQUAL(get_item(queue, 1), 5u);
@@ -125,7 +125,7 @@ void test_image_ll(void) {
     push_item(&queue, 100u);
     push_item(&queue, 200u);
     CU_ASSERT_PTR_NOT_NULL(queue)
-    dump_list(queue);
+    D(dump_list(queue));
     delete_list(&queue);
     CU_ASSERT_PTR_NULL(queue)
 }

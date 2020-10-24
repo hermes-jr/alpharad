@@ -40,6 +40,7 @@ int main(int argc, char **argv) {
 
     CU_TestInfo playground_suite_tests[] = {
             {"Int overflow rotation", test_playground_overflow_rotation},
+            {"Duct tape bitmap", test_playground_bitmap},
             CU_TEST_INFO_NULL
     };
 

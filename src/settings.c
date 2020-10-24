@@ -92,7 +92,7 @@ void populate_settings(int argc, char **argv) {
                     printf("Couldn't parse height");
                     exit(EXIT_FAILURE);
                 }
-                printf("w h %d %d\n", settings.width, settings.height);
+                D(printf("w h %d %d\n", settings.width, settings.height));
                 break;
             }
 

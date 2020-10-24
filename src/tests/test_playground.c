@@ -30,7 +30,7 @@ void test_playground_overflow_rotation(void) {
  * of booleans. But it is Saturday evening and I'm having fun LOL.
  */
 void test_playground_bitmap(void) {
-    int size = 240 * 120 * 2;
+    const int size = 240 * 120 * 2;
 
     // Allocate enough memory so that every pixel would have a corresponding bit
     uint_fast16_t *visited = calloc(ceil(size / 16.0), sizeof(uint_fast16_t));
@@ -38,17 +38,17 @@ void test_playground_bitmap(void) {
     uint_fast16_t coord_fine = 1u << (coord_coarse % 16);
 
     // Check if marked
-    CU_ASSERT_FALSE((visited[coord_coarse / 16] & coord_fine) > 0)
+    CU_ASSERT_FALSE(visited[coord_coarse / 16] & coord_fine)
 
     // Mark as visited
     visited[coord_coarse / 16] |= coord_fine;
-    CU_ASSERT_TRUE((visited[coord_coarse / 16] & coord_fine) > 0)
+    CU_ASSERT_TRUE(visited[coord_coarse / 16] & coord_fine)
     // 9 => 9th bit should be set in the zeroth bucket, 2^9
     CU_ASSERT_EQUAL(visited[0], 512u)
 
     coord_coarse = 101u;
     coord_fine = 1u << (coord_coarse % 16);
-    CU_ASSERT_FALSE((visited[coord_coarse / 16] & coord_fine) > 0)
+    CU_ASSERT_FALSE(visited[coord_coarse / 16] & coord_fine)
 
     visited[coord_coarse / 16] |= coord_fine;
     // 101 => 5th bit should be set in the sixth bucket, 2^5

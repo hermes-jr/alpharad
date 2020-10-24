@@ -198,7 +198,7 @@ def m_quantile():
         yfq = sum(ys_count[k] for k in range(y + 1)) / ys_total
 
         # Equalize the chances in byte conversion, eliminate smaller segments around 0.0 and 1.0
-        # Simple flooring/ceiling would make some values to be 1.5 times frequent than others, round robin helps
+        # Simple flooring/ceiling would make some values to be 1.5 times frequent than others, RR helps
         if sq:
             x_conv = math.floor(257 * xfq) - 1
             y_conv = math.ceil(257 * yfq) - 1

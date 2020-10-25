@@ -22,6 +22,4 @@ bool bit_accumulator(bool bit, uint8_t *ret);
 
 void print_buf_byte_state(ushort);
 
-static u_long bytes = 0;
-
 #endif //ALPHARAD_DATA_EXTRACTORS_H

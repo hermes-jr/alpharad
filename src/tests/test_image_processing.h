@@ -10,6 +10,8 @@ int image_processing_suite_cleanup(void);
 
 void test_image_ccl(void);
 
+void test_image_ccl_rr(void);
+
 void test_image_return_single(void);
 
 void test_image_return_multiple(void);

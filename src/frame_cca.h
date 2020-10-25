@@ -17,6 +17,9 @@ typedef struct node_t {
     struct node_t *tail;
 } node_t;
 
+/* Make it global for unit tests, improve if possible */
+uint rr;
+
 bool is_pixel_lit(const uint8_t *p, uint idx);
 
 points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode);

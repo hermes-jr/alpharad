@@ -77,7 +77,7 @@ void populate_settings(int argc, char **argv) {
 
                 char *delimiter = ":";
                 /* Get width */
-                mode_token = strtok(provided_mode, ":");
+                mode_token = strtok(provided_mode, delimiter);
                 if (mode_token != NULL) {
                     settings.width = strtol(mode_token, NULL, 0);
                 } else {
@@ -85,7 +85,7 @@ void populate_settings(int argc, char **argv) {
                     exit(EXIT_FAILURE);
                 }
                 /* Get height */
-                mode_token = strtok(NULL, ":");
+                mode_token = strtok(NULL, delimiter);
                 if (mode_token != NULL) {
                     settings.height = strtol(mode_token, NULL, 0);
                 } else {

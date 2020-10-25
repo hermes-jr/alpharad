@@ -6,7 +6,7 @@ extern struct settings settings;
 
 /* Add item to the end of linked list */
 void push_item(node_t **head, uint v) {
-    node_t *new_node = malloc(sizeof(node_t));
+    node_t *new_node = calloc(1, sizeof(node_t));
     if (!new_node) {
         return;
     }
@@ -16,7 +16,9 @@ void push_item(node_t **head, uint v) {
         *head = new_node;
     } else {
         /* Add to the end */
-        (*head)->tail->next = new_node;
+        node_t **tmp = &((*head)->tail->next);
+        (*head)->tail->tail = NULL;
+        *tmp = new_node;
     }
     (*head)->tail = new_node;
 }
@@ -26,7 +28,7 @@ uint pop_item(node_t **head) {
     uint result = (*head)->v;
     node_t *tmp = *head;
     *head = (*head)->next;
-    if (NULL != *head) {
+    if (*head != NULL) {
         (*head)->tail = tmp->tail;
     }
     free(tmp);
@@ -63,11 +65,10 @@ void delete_list(node_t **head) {
  * @return linked list of representatives of each group of connected pixels
  */
 points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
-    static uint rr;
     points_detected result = {0, NULL};
 
     const uint dw = settings.width * 2;
-    uint_fast16_t *visited = calloc((size + 15) / 16, sizeof(uint_fast16_t));
+    uint_fast16_t *visited = calloc((size + 15) / 16, sizeof(uint_fast16_t)); // ceil(size/16.0)
 
     for (uint idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) {
@@ -96,31 +97,32 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
 
         /* By this point we are at bright and non-visited pixel */
         node_t *queue = NULL;
-        node_t *current_batch = NULL;
+        points_detected current_batch = {0, NULL};
         push_item(&queue, idx);
         D(printf("\nAnalyzing neighbors of %d:%d: { ", x, y));
         do {
             uint inner_idx = pop_item(&queue);
-            uint cx = (inner_idx % dw) / 2;
-            uint cy = inner_idx / dw;
+            if (check_visited(visited, inner_idx)) { continue; }
             mark_visited(visited, inner_idx);
             if (!is_pixel_lit(p, inner_idx)) { continue; }
+
+            uint cx = (inner_idx % dw) / 2;
+            uint cy = inner_idx / dw;
             D(printf("%d:%d, ", cx, cy));
-            push_item(&current_batch, inner_idx);
+
+            current_batch.len++;
+            /* 99.99% of the time there will be no more than 4-6 reallocations per frame. Should not be a problem */
+            current_batch.arr = realloc(current_batch.arr, current_batch.len);
+            current_batch.arr[current_batch.len - 1] = inner_idx;
 
             /* Too lazy to optimize this crap. Maybe later */
             bool up = cy > 1;
             bool down = cy < settings.height - 1;
             bool left = cx > 1;
             bool right = cx < settings.width - 1;
-            if (down && !check_visited(visited, inner_idx + dw)) {
-                push_item(&queue, inner_idx + dw); // S
-            }
-            if (down && right && !check_visited(visited, inner_idx + dw + 2)) {
-                push_item(&queue, inner_idx + dw + 2); // SE
-            }
-            if (down && left && !check_visited(visited, inner_idx + dw - 2)) {
-                push_item(&queue, inner_idx + dw - 2); // SW
+            /* In reading order for no particular reason other than to simplify testing */
+            if (up && left && !check_visited(visited, inner_idx - dw - 2)) {
+                push_item(&queue, inner_idx - dw - 2); // NW
             }
             if (up && !check_visited(visited, inner_idx - dw)) {
                 push_item(&queue, inner_idx - dw); // N
@@ -128,14 +130,20 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             if (up && right && !check_visited(visited, inner_idx - dw + 2)) {
                 push_item(&queue, inner_idx - dw + 2); // NE
             }
-            if (up && left && !check_visited(visited, inner_idx - dw - 2)) {
-                push_item(&queue, inner_idx - dw - 2); // NW
-            }
             if (left && !check_visited(visited, inner_idx - 2)) {
                 push_item(&queue, inner_idx - 2); // W
             }
             if (right && !check_visited(visited, inner_idx + 2)) {
                 push_item(&queue, inner_idx + 2); // E
+            }
+            if (down && left && !check_visited(visited, inner_idx + dw - 2)) {
+                push_item(&queue, inner_idx + dw - 2); // SW
+            }
+            if (down && !check_visited(visited, inner_idx + dw)) {
+                push_item(&queue, inner_idx + dw); // S
+            }
+            if (down && right && !check_visited(visited, inner_idx + dw + 2)) {
+                push_item(&queue, inner_idx + dw + 2); // SE
             }
 
         } while (queue != NULL);
@@ -144,9 +152,8 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
         /* We have a region now, select a representative with round-robin */
         result.len++;
         result.arr = realloc(result.arr, result.len);
-        result.arr[result.len - 1] = get_item(current_batch, 0); // FIXME: rr
-//        result.arr[result.len - 1] = 1;// region[rr++];
-        delete_list(&current_batch);
+        result.arr[result.len - 1] = current_batch.arr[rr++ % current_batch.len];
+        free(current_batch.arr);
     }
     return result;
 }

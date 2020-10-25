@@ -12,6 +12,7 @@
 #endif //HAVE_OPENSSL
 
 static uint8_t buf_byte;
+ulong bytes = 0;
 
 extern struct settings settings;
 

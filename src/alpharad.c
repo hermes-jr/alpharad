@@ -11,6 +11,7 @@
 #include "v4l2_util.h"
 
 extern struct settings settings;
+extern ulong bytes;
 
 int device = -1;
 static struct timeval start_time;

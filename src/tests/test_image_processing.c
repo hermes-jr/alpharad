@@ -4,6 +4,7 @@
 #include "test_image_processing.h"
 
 extern struct settings settings;
+extern uint rr;
 
 uint coord1;
 uint coord2;
@@ -76,15 +77,53 @@ void test_image_empty(void) {
     CU_ASSERT_PTR_EQUAL(result.arr, NULL)
 }
 
+/**
+ * Testing the following configuration:
+ * ##
+ * ##  #
+ *
+ * CCL should detect a square and a standalone point and return them as two different entities.
+ */
 void test_image_ccl(void) {
     uint p1 = xy_to_yuv(1u, 2u);
-    uint p2 = xy_to_yuv(1u, 3u);
-    uint p3 = xy_to_yuv(2u, 2u);
+    uint p2 = xy_to_yuv(2u, 2u);
+    uint p3 = xy_to_yuv(1u, 3u);
     uint p4 = xy_to_yuv(2u, 3u);
-    mock_frame[p1] = 0xFF;
-    mock_frame[p2] = 0xFF;
-    mock_frame[p3] = 0xFF;
-    mock_frame[p4] = 0xFF;
+    uint p5 = xy_to_yuv(5u, 3u);
+    mock_frame[p1] = mock_frame[p2] = mock_frame[p3] = mock_frame[p4] = 0xFF;
+    mock_frame[p5] = 0xFF;
+
+    points_detected result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
+    CU_ASSERT_EQUAL(result.len, 2)
+    CU_ASSERT_PTR_NOT_EQUAL(result.arr, NULL)
+    CU_ASSERT_EQUAL(result.arr[1], p5)
+    uint square_representative = result.arr[0];
+    CU_ASSERT_TRUE(square_representative == p1 || square_representative == p2 || square_representative == p3 ||
+                   square_representative == p4)
+    free(result.arr);
+}
+
+/**
+ * Testing the following configuration:
+ * ##
+ * ##
+ *
+ * CCL should detect the square shape and yield a new representative for it
+ * in round-robin fashion each time to avoid bias.
+ *
+ * In this case pixels would be discovered in reading order:
+ * 12
+ * 34
+ */
+void test_image_ccl_rr(void) {
+    uint p1 = xy_to_yuv(1u, 2u);
+    uint p2 = xy_to_yuv(2u, 2u);
+    uint p3 = xy_to_yuv(1u, 3u);
+    uint p4 = xy_to_yuv(2u, 3u);
+    mock_frame[p1] = mock_frame[p2] = mock_frame[p3] = mock_frame[p4] = 0xFF;
+
+    /* Reset counter predictable effects */
+    rr = 0;
 
     points_detected result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
     CU_ASSERT_EQUAL(result.len, 1)
@@ -92,10 +131,32 @@ void test_image_ccl(void) {
     CU_ASSERT_EQUAL(result.arr[0], p1)
     free(result.arr);
 
-    /* Expect round-robin to change the representative next time */
+    /* rr should be 1 by now */
+    CU_ASSERT_EQUAL(rr, 1)
+
+    /* Expect round-robin to pick another representative next time */
     result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
+    CU_ASSERT_EQUAL(result.len, 1)
     CU_ASSERT_EQUAL(result.arr[0], p2)
     free(result.arr);
+    CU_ASSERT_EQUAL(rr, 2)
+
+    result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
+    CU_ASSERT_EQUAL(result.arr[0], p3)
+    free(result.arr);
+    CU_ASSERT_EQUAL(rr, 3)
+
+    result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
+    CU_ASSERT_EQUAL(result.arr[0], p4)
+    free(result.arr);
+
+    /* And back to the origin */
+    result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
+    CU_ASSERT_EQUAL_FATAL(result.len, 1)
+    CU_ASSERT_EQUAL(result.arr[0], p1)
+    free(result.arr);
+
+    CU_ASSERT_EQUAL(rr, 5)
 }
 
 void test_image_ll(void) {
@@ -124,6 +185,7 @@ void test_image_ll(void) {
 
     push_item(&queue, 100u);
     push_item(&queue, 200u);
+    push_item(&queue, 300u);
     CU_ASSERT_PTR_NOT_NULL(queue)
     D(dump_list(queue));
     delete_list(&queue);

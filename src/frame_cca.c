@@ -79,16 +79,13 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
 
         if (check_visited(visited, idx)) { continue; }
 
-        uint x = (idx % dw) / 2;
-        uint y = idx / dw;
-
         /* By this point we are at bright and non-visited pixel */
         node_t *queue = NULL;
         points_detected current_batch = {0, NULL};
 
         push_item(&queue, idx);
 
-        D(printf("\nAnalyzing neighbors of %d:%d: { ", x, y));
+        D(printf("\nAnalyzing neighbors of %d:%d: { ", (idx % dw) / 2, idx / dw));
         do {
             uint inner_idx = pop_item(&queue);
 

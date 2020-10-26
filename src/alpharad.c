@@ -22,18 +22,14 @@ uint8_t fps_buffer_idx = 0;
 FILE *out_file;
 FILE *stat_file;
 
+/*
 static void log_flash_at_coordinates(uint x, uint y) {
     char z[32];
     snprintf(z, 32, "%d:%d\n", x, y);
     fputs(z, stat_file);
     fflush(stat_file);
 }
-
-static void spawn_byte(uint8_t conv) {
-    D(printf("spawning %d\n", conv));
-    fputc(conv, out_file);
-    fflush(out_file);
-}
+*/
 
 void process_image(const uint8_t *p, uint size) {
     bytes_spawned bs;
@@ -51,8 +47,7 @@ void process_image(const uint8_t *p, uint size) {
             break;
         case PROC_DEFAULT:
         default:
-//            process_image_default(p, size);
-            bs = process_image_sha256_non_blank_frames(p, size); // FIXME: this is temporary; for gathering data
+            bs = process_image_default(p, size);
             break;
     }
 
@@ -142,9 +137,9 @@ int main(int argc, char **argv) {
     (void) argc;
 
     int settings_ret = populate_settings(argc, argv, stdout);
-    if(settings_ret == -1) {
+    if (settings_ret == -1) {
         exit(EXIT_FAILURE);
-    } else if(settings_ret == 1) {
+    } else if (settings_ret == 1) {
         exit(EXIT_SUCCESS);
     }
     /* Avoid division by zero */

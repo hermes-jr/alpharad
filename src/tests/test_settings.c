@@ -28,7 +28,7 @@ void test_settings_incorrect_width(void) {
 
     /* Expect fatal error */
     CU_ASSERT_EQUAL(settings_ret, -1)
-    CU_ASSERT_STRING_EQUAL(mock_buf, "Couldn't parse width\n")
+    CU_ASSERT_NSTRING_EQUAL(mock_buf, "Couldn't parse width", 20)
 
     fclose(mock_out);
 }
@@ -44,7 +44,7 @@ void test_settings_incorrect_height(void) {
 
     /* Expect fatal error */
     CU_ASSERT_EQUAL(settings_ret, -1)
-    CU_ASSERT_STRING_EQUAL(mock_buf, "Couldn't parse height\n")
+    CU_ASSERT_NSTRING_EQUAL(mock_buf, "Couldn't parse height", 21)
 
     fclose(mock_out);
 }

@@ -6,6 +6,7 @@ set(test_files
         ../data_extractors.c
         test_settings.c
         test_image_processing.c
+        test_data_extractors.c
         test_playground.c
         tests_runner.c
         )

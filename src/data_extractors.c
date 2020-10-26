@@ -7,9 +7,10 @@
 #if HAVE_OPENSSL
 
 #include <openssl/sha.h>
-#include <stdio.h>
 
 #endif //HAVE_OPENSSL
+
+#include <stdio.h>
 
 static uint8_t buf_byte;
 ulong bytes = 0;
@@ -18,7 +19,6 @@ extern struct settings settings;
 
 bytes_spawned process_image_default(const uint8_t *p, uint size) {
     bytes_spawned result = {0, NULL};
-    const uint dw = settings.width * 2;
 
     points_detected points = get_all_flashes(p, size, false);
 
@@ -26,78 +26,65 @@ bytes_spawned process_image_default(const uint8_t *p, uint size) {
         return result;
     }
 
-    for (uint idx = 0; idx < points.len; idx++) {
-        uint cp = points.arr[idx];
+    for (uint i = 0; i < points.len; i++) {
+        uint cp = points.arr[i];
 
-        uint x = (cp % dw) / 2;
-        uint y = cp / dw;
-
-        if (x == 0 || y == 0 || x + 1 == settings.width || y + 1 == settings.height) {
-            // Skip borders, they behave weirdly
-            continue;
-        }
-
-        /*
-         * Check neighbors to avoid counting the same particle multiple times.
-         * Here should be a proper 'connected components' algorithm implementation
-         * but I decided to confine on checking only the closest neighbors.
-         * Only a few flashes have radius more than 2.
-         * Might be an issue on higher resolutions though, so this is not final.
-         */
-        // FIXME: temporarily disabled, registering everything. Waiting for alpharadcamerastage2-10 to be resolved
-//        if (is_pixel_lit(p, idx - dw) || is_pixel_lit(p, idx - dw - 2) || is_pixel_lit(p, idx - dw + 2) ||
-//            is_pixel_lit(p, idx - 2)) {
-//            continue;
-//        }
-
-        D(printf("Flash at %3d:%3d; %d / %d\n", x, y, idx, size));
         uint8_t coord_as_byte = round(
-                ((double) idx / (size - settings.width * 2 - settings.height * 2 - 1)) * UINT8_MAX);
-//        spawn_byte(coord_as_byte);
+                ((double) cp / (size - settings.width * 2 - settings.height * 2 - 1)) * UINT8_MAX);
+
+        result.len++;
+        result.arr = realloc(result.arr, result.len);
+        result.arr[result.len - 1] = coord_as_byte;
+
         bytes++;
-        D(printf("Flash at %3d:%3d, generated: %3d\n", x, y, coord_as_byte));
+        D(printf("Flash at %3d:%3d (%d) generated: %3d\n", (cp % settings.width * 2) / 2, cp / (settings.width * 2), cp,
+                 coord_as_byte));
 
 //        log_flash_at_coordinates(x, y);
     }
+
+    free(points.arr);
     return result;
 }
 
 bytes_spawned process_image_comparator(const uint8_t *p, uint size) {
-    const uint dw = settings.width * 2;
-
-    for (uint idx = 0; idx < size; idx += 2) {
-        if (!is_pixel_lit(p, idx)) {
-            // We're on black, skip to next pixel
-            continue;
-        }
-
-        uint x = (idx % dw) / 2;
-        uint y = idx / dw;
-
-        if (x == 0 || y == 0 || x + 1 == settings.width || y + 1 == settings.height) {
-            // Skip borders, they behave weirdly
-            continue;
-        }
-
-        /*
-         * Check neighbors to avoid counting the same particle multiple times.
-         * Here should be a proper 'connected components' algorithm implementation
-         * but I decided to confine on checking only the closest neighbors.
-         * Only a few flashes have radius more than 2.
-         * Might be an issue on higher resolutions though, so this is not final.
-         */
-        if (is_pixel_lit(p, idx - dw) || is_pixel_lit(p, idx - dw - 2) || is_pixel_lit(p, idx - dw + 2) ||
-            is_pixel_lit(p, idx - 2)) {
-            continue;
-        }
-
-//        bit_accumulator(x, y);
-
-//        log_flash_at_coordinates(x, y);
-    }
+    // FIXME: implement
+    (void) size;
+    (void) p[0];
     bytes_spawned result = {0, NULL};
     return result;
 }
+
+#if HAVE_OPENSSL
+
+bytes_spawned process_image_sha256_all_frames(const uint8_t *p, uint size) {
+    bytes_spawned result = {0, NULL};
+
+    result.len = SHA256_DIGEST_LENGTH;
+    bytes += result.len;
+    result.arr = malloc(result.len * sizeof(result.arr));
+    SHA256(p, size, result.arr);
+
+    return result;
+}
+
+bytes_spawned process_image_sha256_non_blank_frames(const uint8_t *p, uint size) {
+    bytes_spawned result = {0, NULL};
+
+    bool flashes_in_single = has_flashes(p, size);
+    if (!flashes_in_single) {
+        return result;
+    }
+
+    result.len = SHA256_DIGEST_LENGTH;
+    bytes += result.len;
+    result.arr = malloc(result.len * sizeof(result.arr));
+    SHA256(p, size, result.arr);
+
+    return result;
+}
+
+#endif //HAVE_OPENSSL
 
 bool bit_accumulator(bool bit, uint8_t *ret) {
 
@@ -126,40 +113,3 @@ void print_buf_byte_state(ushort buf_byte_counter) {
     }
     printf("\n");
 }
-
-#if HAVE_OPENSSL
-
-bytes_spawned process_image_sha256_all_frames(const uint8_t *p, uint size) {
-    u_char hash[SHA256_DIGEST_LENGTH];
-    SHA256(p, size, hash);
-    bytes += SHA256_DIGEST_LENGTH;
-//    fwrite(hash, 1, SHA256_DIGEST_LENGTH, out_file);
-//    fflush(out_file);
-    bytes_spawned result = {0, NULL};
-    return result;
-}
-
-bytes_spawned process_image_sha256_non_blank_frames(const uint8_t *p, uint size) {
-    bytes_spawned result = {0, NULL};
-
-    // TODO: this is how it supposed to work
-/*
-    bool flashes_in_single = has_flashes(p, size);
-    if(!flashes_in_single) {
-        return result;
-    }
-*/
-    // FIXME: for gathering data
-    points_detected points = get_all_flashes(p, size, FULL_SCAN); // will log detected representatives
-    if (points.len > 0) {
-        result.len = SHA256_DIGEST_LENGTH;
-        bytes += result.len;
-        result.arr = malloc(result.len * sizeof(result.arr));
-        SHA256(p, size, result.arr);
-        free(points.arr);
-    }
-
-    return result;
-}
-
-#endif //HAVE_OPENSSL

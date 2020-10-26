@@ -1,6 +1,7 @@
 #include <CUnit/Basic.h>
 #include "test_settings.h"
 #include "test_image_processing.h"
+#include "test_data_extractors.h"
 #include "test_playground.h"
 
 int main(int argc, char **argv) {
@@ -36,7 +37,12 @@ int main(int argc, char **argv) {
     };
 
     CU_TestInfo data_extraction_suite_tests[] = {
-//            {"Comparator", test_data_comparator},
+            {"Data default", test_data_default},
+#if HAVE_OPENSSL
+            {"Data SHA256 single frame", test_data_sha256_non_blank_frames},
+            {"Data SHA256 every frame", test_data_sha256_all_frames},
+#endif //HAVE_OPENSSL
+            {"Bit shift", test_data_bit_accumulator},
             CU_TEST_INFO_NULL
     };
 
@@ -51,7 +57,8 @@ int main(int argc, char **argv) {
             {"Settings suite", NULL, NULL, settings_test_init, NULL, settings_suite_tests},
             {"Image processing suite", NULL, NULL, image_processing_test_init, image_processing_test_teardown,
              image_processing_suite_tests},
-            {"Data extraction suite", NULL, NULL, NULL, NULL, data_extraction_suite_tests},
+            {"Data extraction suite", NULL, NULL, data_extractors_test_init, data_extractors_test_teardown,
+             data_extraction_suite_tests},
             {"Playground suite", NULL, NULL, NULL, NULL, playground_suite_tests},
             CU_SUITE_INFO_NULL
     };

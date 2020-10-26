@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #ifdef DEBUG
 #  define D(x) (x)
@@ -30,7 +31,7 @@ struct settings {
     char *file_out_name;
 };
 
-void populate_settings(int argc, char **argv);
+int populate_settings(int argc, char **argv, FILE *ofp);
 
 void print_usage(char *self_name);
 

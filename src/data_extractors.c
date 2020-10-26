@@ -140,18 +140,25 @@ bytes_spawned process_image_sha256_all_frames(const uint8_t *p, uint size) {
 }
 
 bytes_spawned process_image_sha256_non_blank_frames(const uint8_t *p, uint size) {
-    for (uint idx = 0; idx < size; idx += 2) {
-        if (!is_pixel_lit(p, idx)) {
-            /* We're on black, skip to next pixel */
-            continue;
-        }
-        u_char hash[SHA256_DIGEST_LENGTH];
-        SHA256(p, size, hash);
-        bytes += SHA256_DIGEST_LENGTH;
-//        fwrite(hash, 1, SHA256_DIGEST_LENGTH, out_file);
-//        fflush(out_file);
-    }
     bytes_spawned result = {0, NULL};
+
+    // TODO: this is how it supposed to work
+/*
+    bool flashes_in_single = has_flashes(p, size);
+    if(!flashes_in_single) {
+        return result;
+    }
+*/
+    // FIXME: for gathering data
+    points_detected points = get_all_flashes(p, size, FULL_SCAN); // will log detected representatives
+    if (points.len > 0) {
+        result.len = SHA256_DIGEST_LENGTH;
+        bytes += result.len;
+        result.arr = malloc(result.len * sizeof(result.arr));
+        SHA256(p, size, result.arr);
+        free(points.arr);
+    }
+
     return result;
 }
 

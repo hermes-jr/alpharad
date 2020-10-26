@@ -36,7 +36,7 @@ int xioctl(int dev, int request, void *arg) {
     return r;
 }
 
-int read_frame(void (*callback)(const uint8_t *p, uint size)) {
+int read_frame(void (*callback)(const uint8_t *, uint)) {
     struct v4l2_buffer buf;
 
     CLEAR(buf);
@@ -62,10 +62,7 @@ int read_frame(void (*callback)(const uint8_t *p, uint size)) {
     assert(buf.index < n_buffers);
 
     frame_number++;
-//    printf("Processing frame %d\n", frame_number);
 
-// FIXME: !!!
-//    process_image(buffers[buf.index].start, buf.bytesused);
     callback(buffers[buf.index].start, buf.bytesused);
 
     if (-1 == xioctl(device, VIDIOC_QBUF, &buf))

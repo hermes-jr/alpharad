@@ -16,7 +16,8 @@ int main(int argc, char **argv) {
     CU_TestInfo settings_suite_tests[] = {
             {"Device should be set", test_settings_population_device},
             {"Dimensions should be parsed properly", test_settings_population_dimensions},
-            {"Incorrect dimensions should be reported", test_settings_incorrect_dimensions},
+            {"Incorrect dimensions should be reported", test_settings_incorrect_width},
+            {"Incorrect dimensions should be reported", test_settings_incorrect_height},
             {"Outfile should be set", test_settings_population_outfile},
             {"Logfile should be set", test_settings_population_logfile},
             {"Verbosity level should be set", test_settings_population_verbose},
@@ -47,8 +48,8 @@ int main(int argc, char **argv) {
 
     // Suites
     CU_SuiteInfo suites[] = {
-            {"Settings suite", NULL, NULL, NULL, NULL, settings_suite_tests},
-            {"Image processing suite", NULL, image_processing_suite_cleanup, image_processing_test_init, NULL,
+            {"Settings suite", NULL, NULL, settings_test_init, NULL, settings_suite_tests},
+            {"Image processing suite", NULL, NULL, image_processing_test_init, image_processing_test_teardown,
              image_processing_suite_tests},
             {"Data extraction suite", NULL, NULL, NULL, NULL, data_extraction_suite_tests},
             {"Playground suite", NULL, NULL, NULL, NULL, playground_suite_tests},

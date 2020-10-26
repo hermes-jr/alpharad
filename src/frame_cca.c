@@ -90,6 +90,7 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             result.len = 1;
             result.arr = malloc(sizeof(idx));
             result.arr[0] = idx;
+            free(visited);
             return result;
         }
 
@@ -112,7 +113,7 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
 
             current_batch.len++;
             /* 99.99% of the time there will be no more than 4-6 reallocations per frame. Should not be a problem */
-            current_batch.arr = realloc(current_batch.arr, current_batch.len);
+            current_batch.arr = realloc(current_batch.arr, current_batch.len * sizeof(current_batch.arr));
             current_batch.arr[current_batch.len - 1] = inner_idx;
 
             /* Too lazy to optimize this crap. Maybe later */
@@ -151,10 +152,17 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
 
         /* We have a region now, select a representative with round-robin */
         result.len++;
-        result.arr = realloc(result.arr, result.len);
+        result.arr = realloc(result.arr, result.len * sizeof(result.arr));
         result.arr[result.len - 1] = current_batch.arr[rr++ % current_batch.len];
         free(current_batch.arr);
+
+        // FIXME: flash logging should be done differently. This is just for debugging
+        printf("%d:%d\n", (result.arr[result.len - 1] % dw) / 2, result.arr[result.len - 1] / dw);
+        fflush(stdout);
     }
+
+    free(visited);
+
     return result;
 }
 

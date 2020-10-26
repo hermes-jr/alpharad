@@ -6,7 +6,7 @@
 
 void image_processing_test_init(void);
 
-int image_processing_suite_cleanup(void);
+void image_processing_test_teardown(void);
 
 void test_image_ccl(void);
 

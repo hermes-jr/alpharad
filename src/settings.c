@@ -1,4 +1,3 @@
-#include <stdio.h>
 #include <getopt.h>
 #include <errno.h>
 #include <string.h>
@@ -46,7 +45,7 @@ void print_usage(char *self_name) {
             self_name, PROJECT_VERSION, settings.dev_name, settings.width, settings.height, settings.file_out_name);
 }
 
-void populate_settings(int argc, char **argv) {
+int populate_settings(int argc, char **argv, FILE *ofp) {
 
     for (;;) {
         int idx;
@@ -54,7 +53,6 @@ void populate_settings(int argc, char **argv) {
                             short_options, long_options, &idx);
 
         if (-1 == c) {
-            optind = 0; // Breaks consecutive tests otherwise
             break;
         }
 
@@ -70,6 +68,7 @@ void populate_settings(int argc, char **argv) {
             case 'g': {
                 int buffer_size = 31;
                 char provided_mode[buffer_size + 1];
+                char *verify_end = NULL;
                 char *mode_token;
 
                 strncpy(provided_mode, optarg, buffer_size);
@@ -79,20 +78,22 @@ void populate_settings(int argc, char **argv) {
                 /* Get width */
                 mode_token = strtok(provided_mode, delimiter);
                 if (mode_token != NULL) {
-                    settings.width = strtol(mode_token, NULL, 0);
-                } else {
-                    printf("Couldn't parse width");
-                    exit(EXIT_FAILURE);
+                    settings.width = strtol(mode_token, &verify_end, 0);
+                }
+                if (mode_token == NULL || (errno && settings.width == 0) || verify_end == mode_token) {
+                    fprintf(ofp, "Couldn't parse width\n");
+                    return -1;
                 }
                 /* Get height */
                 mode_token = strtok(NULL, delimiter);
                 if (mode_token != NULL) {
-                    settings.height = strtol(mode_token, NULL, 0);
-                } else {
-                    printf("Couldn't parse height");
-                    exit(EXIT_FAILURE);
+                    settings.height = strtol(mode_token, &verify_end, 0);
                 }
-                D(printf("w h %d %d\n", settings.width, settings.height));
+                if (mode_token == NULL || (errno && settings.height == 0) || verify_end == mode_token) {
+                    fprintf(ofp, "Couldn't parse height\n");
+                    return -1;
+                }
+                D(fprintf(ofp, "w h %d %d\n", settings.width, settings.height));
                 break;
             }
 
@@ -105,33 +106,32 @@ void populate_settings(int argc, char **argv) {
                 break;
 
             case 'm':
-
-                settings.height = strtol(optarg, NULL, 0);
-                if (errno)
-                    printf("Couldn't parse option 'g' %s\n", optarg);
+                // FIXME: implement mode selection
+                fprintf(ofp, "Mode select: implement.\n");
                 break;
 
             case 'M':
-                // FIXME: implement
-                //  print_supported_modes();
-                printf("Supported modes: implement.");
-                exit(EXIT_SUCCESS);
+                // FIXME: implement print_supported_modes();
+                fprintf(ofp, "Supported modes: implement.\n");
+                return 1;
 
             case 'v':
                 settings.verbose = strtol(optarg, NULL, 0);
                 if (errno)
-                    printf("Couldn't parse option 'v' %s\n", optarg);
+                    fprintf(ofp, "Couldn't parse option 'v' %s\n", optarg);
                 break;
 
             case 'h':
                 print_usage(argv[0]);
-                exit(EXIT_SUCCESS);
+                return 1;
 
 
             default:
                 print_usage(argv[0]);
-                exit(EXIT_FAILURE);
+                return -1;
         }
     }
+
+    return 0;
 
 }

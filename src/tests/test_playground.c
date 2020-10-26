@@ -53,4 +53,6 @@ void test_playground_bitmap(void) {
     visited[coord_coarse / 16] |= coord_fine;
     // 101 => 5th bit should be set in the sixth bucket, 2^5
     CU_ASSERT_EQUAL(visited[6], 32u)
+
+    free(visited);
 }

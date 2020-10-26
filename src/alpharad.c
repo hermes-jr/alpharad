@@ -36,23 +36,32 @@ static void spawn_byte(uint8_t conv) {
 }
 
 void process_image(const uint8_t *p, uint size) {
+    bytes_spawned bs;
     switch (settings.frame_processor) {
 #if HAVE_OPENSSL
         case PROC_SHA256_NON_BLANK_FRAMES_ONLY:
-            process_image_sha256_non_blank_frames(p, size);
+            bs = process_image_sha256_non_blank_frames(p, size);
             break;
         case PROC_SHA256_ALL_FRAMES:
-            process_image_sha256_all_frames(p, size);
+            bs = process_image_sha256_all_frames(p, size);
             break;
 #endif //HAVE_OPENSSL
         case PROC_COMPARATOR:
-            process_image_comparator(p, size);
+            bs = process_image_comparator(p, size);
             break;
         case PROC_DEFAULT:
         default:
-            process_image_default(p, size);
+//            process_image_default(p, size);
+            bs = process_image_sha256_non_blank_frames(p, size); // FIXME: this is temporary; for gathering data
             break;
     }
+
+    if (bs.len > 0) {
+        fwrite(bs.arr, 1, bs.len, out_file);
+        fflush(out_file);
+        free(bs.arr);
+    }
+
 }
 
 static void print_perf_stats(void) {
@@ -132,7 +141,12 @@ int main(int argc, char **argv) {
     (void) argv;
     (void) argc;
 
-    populate_settings(argc, argv);
+    int settings_ret = populate_settings(argc, argv, stdout);
+    if(settings_ret == -1) {
+        exit(EXIT_FAILURE);
+    } else if(settings_ret == 1) {
+        exit(EXIT_SUCCESS);
+    }
     /* Avoid division by zero */
     assert(settings.width > 2);
     assert(settings.height > 2);

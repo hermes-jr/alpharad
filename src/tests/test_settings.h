@@ -1,9 +1,13 @@
 #ifndef ALPHARAD_TEST_SETTINGS_H
 #define ALPHARAD_TEST_SETTINGS_H
 
+void settings_test_init(void);
+
 void test_settings_population_dimensions(void);
 
-void test_settings_incorrect_dimensions(void);
+void test_settings_incorrect_width(void);
+
+void test_settings_incorrect_height(void);
 
 void test_settings_population_device(void);
 

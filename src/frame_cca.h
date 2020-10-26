@@ -38,4 +38,6 @@ uint check_visited(uint_fast16_t const *visited, uint idx);
 
 void mark_visited(uint_fast16_t *visited, uint idx);
 
+void enqueue_neighbors(const uint_fast16_t *visited, node_t **queue, uint inner_idx, uint cx, uint cy);
+
 #endif //ALPHARAD_FRAME_CCA_H

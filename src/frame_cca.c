@@ -77,32 +77,21 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             continue;
         }
 
+        if (check_visited(visited, idx)) { continue; }
+
         uint x = (idx % dw) / 2;
         uint y = idx / dw;
-
-        /* Skip borders, they behave weirdly in my particular camera */
-        if (x == 0 || y == 0 || x + 1 == settings.width || y + 1 == settings.height) {
-            continue;
-        }
-
-        /* Register this single point and return ASAP */
-        if (mode == FIRST_ONLY) {
-            result.len = 1;
-            result.arr = malloc(sizeof(idx));
-            result.arr[0] = idx;
-            free(visited);
-            return result;
-        }
-
-        if (check_visited(visited, idx)) { continue; }
 
         /* By this point we are at bright and non-visited pixel */
         node_t *queue = NULL;
         points_detected current_batch = {0, NULL};
+
         push_item(&queue, idx);
+
         D(printf("\nAnalyzing neighbors of %d:%d: { ", x, y));
         do {
             uint inner_idx = pop_item(&queue);
+
             if (check_visited(visited, inner_idx)) { continue; }
             mark_visited(visited, inner_idx);
             if (!is_pixel_lit(p, inner_idx)) { continue; }
@@ -111,46 +100,31 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             uint cy = inner_idx / dw;
             D(printf("%d:%d, ", cx, cy));
 
+            /* Skip borders, they behave weirdly in my particular camera. Should be optional though */
+            if (cx == 0 || cy == 0 || cx + 1 == settings.width || cy + 1 == settings.height) {
+                continue;
+            }
+
+            /* Register this single point and return ASAP */
+            if (mode == FIRST_ONLY) {
+                result.len = 1;
+                result.arr = malloc(sizeof(idx));
+                result.arr[0] = idx;
+                free(visited);
+                return result;
+            }
+
             current_batch.len++;
             /* 99.99% of the time there will be no more than 4-6 reallocations per frame. Should not be a problem */
             current_batch.arr = realloc(current_batch.arr, current_batch.len * sizeof(current_batch.arr));
             current_batch.arr[current_batch.len - 1] = inner_idx;
 
-            /* Too lazy to optimize this crap. Maybe later */
-            bool up = cy > 1;
-            bool down = cy < settings.height - 1;
-            bool left = cx > 1;
-            bool right = cx < settings.width - 1;
-            /* In reading order for no particular reason other than to simplify testing */
-            if (up && left && !check_visited(visited, inner_idx - dw - 2)) {
-                push_item(&queue, inner_idx - dw - 2); // NW
-            }
-            if (up && !check_visited(visited, inner_idx - dw)) {
-                push_item(&queue, inner_idx - dw); // N
-            }
-            if (up && right && !check_visited(visited, inner_idx - dw + 2)) {
-                push_item(&queue, inner_idx - dw + 2); // NE
-            }
-            if (left && !check_visited(visited, inner_idx - 2)) {
-                push_item(&queue, inner_idx - 2); // W
-            }
-            if (right && !check_visited(visited, inner_idx + 2)) {
-                push_item(&queue, inner_idx + 2); // E
-            }
-            if (down && left && !check_visited(visited, inner_idx + dw - 2)) {
-                push_item(&queue, inner_idx + dw - 2); // SW
-            }
-            if (down && !check_visited(visited, inner_idx + dw)) {
-                push_item(&queue, inner_idx + dw); // S
-            }
-            if (down && right && !check_visited(visited, inner_idx + dw + 2)) {
-                push_item(&queue, inner_idx + dw + 2); // SE
-            }
+            enqueue_neighbors(visited, &queue, inner_idx, cx, cy);
 
         } while (queue != NULL);
         D(printf("}\n"));
 
-        /* We have a region now, select a representative with round-robin */
+        /* We have a region now, select a representative */
         result.len++;
         result.arr = realloc(result.arr, result.len * sizeof(result.arr));
         result.arr[result.len - 1] = current_batch.arr[rr++ % current_batch.len];
@@ -162,8 +136,42 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
     }
 
     free(visited);
-
     return result;
+}
+
+/* Add neighbors to the queue. 8-connectivity, in reading order */
+void enqueue_neighbors(const uint_fast16_t *visited, node_t **queue, uint inner_idx, uint cx, uint cy) {
+    /* Too lazy to optimize this crap. Maybe later */
+    const uint dw = settings.width * 2;
+    bool up = cy > 0;
+    bool down = cy < settings.height;
+    bool left = cx > 0;
+    bool right = cx < settings.width;
+    /* In reading order for no particular reason other than to simplify testing */
+    if (up && left && !check_visited(visited, inner_idx - dw - 2)) {
+        push_item(queue, inner_idx - dw - 2); // NW
+    }
+    if (up && !check_visited(visited, inner_idx - dw)) {
+        push_item(queue, inner_idx - dw); // N
+    }
+    if (up && right && !check_visited(visited, inner_idx - dw + 2)) {
+        push_item(queue, inner_idx - dw + 2); // NE
+    }
+    if (left && !check_visited(visited, inner_idx - 2)) {
+        push_item(queue, inner_idx - 2); // W
+    }
+    if (right && !check_visited(visited, inner_idx + 2)) {
+        push_item(queue, inner_idx + 2); // E
+    }
+    if (down && left && !check_visited(visited, inner_idx + dw - 2)) {
+        push_item(queue, inner_idx + dw - 2); // SW
+    }
+    if (down && !check_visited(visited, inner_idx + dw)) {
+        push_item(queue, inner_idx + dw); // S
+    }
+    if (down && right && !check_visited(visited, inner_idx + dw + 2)) {
+        push_item(queue, inner_idx + dw + 2); // SE
+    }
 }
 
 inline void mark_visited(uint_fast16_t *visited, uint idx) {

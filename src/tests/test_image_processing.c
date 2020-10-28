@@ -20,8 +20,8 @@ void image_processing_test_init(void) {
     mock_frame = calloc(screen_buffer_size, sizeof(uint8_t));
 
     /* Common test points */
-    coord1 = settings.width * 2 + 2; // x=1 y=1
-    coord2 = settings.width * 2 + 6; // x=3 y=1
+    coord1 = cartesian_to_yuv((coordinate) {1, 1});
+    coord2 = cartesian_to_yuv((coordinate) {3, 1});
 }
 
 /* Free fake frame buffer */
@@ -35,7 +35,7 @@ void test_image_return_single(void) {
     points_detected result = get_all_flashes(mock_frame, screen_buffer_size, FIRST_ONLY);
     CU_ASSERT_EQUAL_FATAL(result.len, 1)
     CU_ASSERT_PTR_NOT_EQUAL_FATAL(result.arr, NULL)
-    CU_ASSERT_EQUAL(result.arr[0], coord1)
+    CU_ASSERT_EQUAL(cartesian_to_yuv(result.arr[0]), coord1)
     free(result.arr);
 }
 
@@ -45,8 +45,8 @@ void test_image_return_multiple(void) {
     points_detected result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
     CU_ASSERT_EQUAL(result.len, 2)
     CU_ASSERT_PTR_NOT_EQUAL(result.arr, NULL)
-    CU_ASSERT_EQUAL(result.arr[0], coord1)
-    CU_ASSERT_EQUAL(result.arr[1], coord2)
+    CU_ASSERT_EQUAL(cartesian_to_yuv(result.arr[0]), coord1)
+    CU_ASSERT_EQUAL(cartesian_to_yuv(result.arr[1]), coord2)
     free(result.arr);
 }
 
@@ -81,19 +81,19 @@ void test_image_empty(void) {
  * CCL should detect a square and a standalone point and return them as two different entities.
  */
 void test_image_ccl(void) {
-    uint p1 = xy_to_yuv(1u, 2u);
-    uint p2 = xy_to_yuv(2u, 2u);
-    uint p3 = xy_to_yuv(1u, 3u);
-    uint p4 = xy_to_yuv(2u, 3u);
-    uint p5 = xy_to_yuv(5u, 3u);
+    uint p1 = cartesian_to_yuv((coordinate) {1, 2});
+    uint p2 = cartesian_to_yuv((coordinate) {2, 2});
+    uint p3 = cartesian_to_yuv((coordinate) {1, 3});
+    uint p4 = cartesian_to_yuv((coordinate) {2, 3});
+    uint p5 = cartesian_to_yuv((coordinate) {5, 3});
     mock_frame[p1] = mock_frame[p2] = mock_frame[p3] = mock_frame[p4] = 0xFF;
     mock_frame[p5] = 0xFF;
 
     points_detected result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
     CU_ASSERT_EQUAL(result.len, 2)
     CU_ASSERT_PTR_NOT_EQUAL(result.arr, NULL)
-    CU_ASSERT_EQUAL(result.arr[1], p5)
-    uint square_representative = result.arr[0];
+    CU_ASSERT_EQUAL(cartesian_to_yuv(result.arr[1]), p5)
+    uint square_representative = cartesian_to_yuv(result.arr[0]);
     CU_ASSERT_TRUE(square_representative == p1 || square_representative == p2 || square_representative == p3 ||
                    square_representative == p4)
     free(result.arr);
@@ -112,10 +112,10 @@ void test_image_ccl(void) {
  * 34
  */
 void test_image_ccl_rr(void) {
-    uint p1 = xy_to_yuv(1u, 2u);
-    uint p2 = xy_to_yuv(2u, 2u);
-    uint p3 = xy_to_yuv(1u, 3u);
-    uint p4 = xy_to_yuv(2u, 3u);
+    uint p1 = cartesian_to_yuv((coordinate) {1, 2});
+    uint p2 = cartesian_to_yuv((coordinate) {2, 2});
+    uint p3 = cartesian_to_yuv((coordinate) {1, 3});
+    uint p4 = cartesian_to_yuv((coordinate) {2, 3});
     mock_frame[p1] = mock_frame[p2] = mock_frame[p3] = mock_frame[p4] = 0xFF;
 
     /* Reset counter predictable effects */
@@ -124,7 +124,7 @@ void test_image_ccl_rr(void) {
     points_detected result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
     CU_ASSERT_EQUAL(result.len, 1)
     CU_ASSERT_PTR_NOT_EQUAL(result.arr, NULL)
-    CU_ASSERT_EQUAL(result.arr[0], p1)
+    CU_ASSERT_EQUAL(cartesian_to_yuv(result.arr[0]), p1)
     free(result.arr);
 
     /* rr should be 1 by now */
@@ -133,26 +133,45 @@ void test_image_ccl_rr(void) {
     /* Expect round-robin to pick another representative next time */
     result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
     CU_ASSERT_EQUAL(result.len, 1)
-    CU_ASSERT_EQUAL(result.arr[0], p2)
+    CU_ASSERT_EQUAL(cartesian_to_yuv(result.arr[0]), p2)
     free(result.arr);
     CU_ASSERT_EQUAL(rr, 2)
 
     result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
-    CU_ASSERT_EQUAL(result.arr[0], p3)
+    CU_ASSERT_EQUAL(cartesian_to_yuv(result.arr[0]), p3)
     free(result.arr);
     CU_ASSERT_EQUAL(rr, 3)
 
     result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
-    CU_ASSERT_EQUAL(result.arr[0], p4)
+    CU_ASSERT_EQUAL(cartesian_to_yuv(result.arr[0]), p4)
     free(result.arr);
 
     /* And back to the origin */
     result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
     CU_ASSERT_EQUAL_FATAL(result.len, 1)
-    CU_ASSERT_EQUAL(result.arr[0], p1)
+    CU_ASSERT_EQUAL(cartesian_to_yuv(result.arr[0]), p1)
     free(result.arr);
 
     CU_ASSERT_EQUAL(rr, 5)
+}
+
+void test_image_logging(void) {
+    const size_t limit = 1024;
+    char mock_buf[limit];
+    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+    settings.file_hits = mock_out;
+
+    mock_frame[coord1] = 0xFF; // 1:1 should be logged
+
+    points_detected result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
+    fflush(settings.file_hits);
+    CU_ASSERT_EQUAL(result.len, 1)
+    free(result.arr);
+
+    CU_ASSERT_NSTRING_EQUAL(mock_buf, "1:1", 3)
+
+    settings.file_hits = NULL;
+    fclose(mock_out);
 }
 
 void test_image_ll(void) {
@@ -188,8 +207,8 @@ void test_image_ll(void) {
     CU_ASSERT_PTR_NULL(queue)
 }
 
-uint xy_to_yuv(uint x, uint y) {
-    return (settings.width * y + x) * 2;
+uint cartesian_to_yuv(coordinate c) {
+    return (settings.width * c.y + c.x) * 2;
 }
 
 void dump_list(node_t *head) {

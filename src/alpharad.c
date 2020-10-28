@@ -1,5 +1,4 @@
 #include <signal.h>
-#include "alpharad.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h> /* define CLEAR(x) */
@@ -9,6 +8,7 @@
 #include "settings.h"
 #include "data_extractors.h"
 #include "v4l2_util.h"
+#include "alpharad.h"
 
 extern struct settings settings;
 extern ulong bytes;
@@ -18,18 +18,6 @@ static struct timeval start_time;
 
 uint *fps_buffer;
 uint8_t fps_buffer_idx = 0;
-
-FILE *out_file;
-FILE *stat_file;
-
-/*
-static void log_flash_at_coordinates(uint x, uint y) {
-    char z[32];
-    snprintf(z, 32, "%d:%d\n", x, y);
-    fputs(z, stat_file);
-    fflush(stat_file);
-}
-*/
 
 void process_image(const uint8_t *p, uint size) {
     bytes_spawned bs;
@@ -52,8 +40,10 @@ void process_image(const uint8_t *p, uint size) {
     }
 
     if (bs.len > 0) {
-        fwrite(bs.arr, 1, bs.len, out_file);
-        fflush(out_file);
+        if (settings.file_out != NULL) {
+            fwrite(bs.arr, 1, bs.len, settings.file_out);
+            fflush(settings.file_out);
+        }
         free(bs.arr);
     }
 
@@ -72,7 +62,7 @@ static void print_perf_stats(void) {
 }
 
 /* Get average frame processing time from a circular buffer, estimate Frames Per Second */
-float fps_rolling_average() {
+float fps_rolling_average(void) {
     float sum = 0u;
     D(printf("Frame durations rolling buffer: "));
     for (int j = 0; j < FPS_BUFFER_SIZE; j++) {
@@ -131,6 +121,20 @@ static void signal_usr1_handler(int signum) {
     }
 }
 
+static void pre_exit_cleanup(void) {
+    uninit_device();
+    close_device();
+
+    if (settings.file_out != NULL) {
+        fclose(settings.file_out);
+    }
+    if (settings.file_hits != NULL) {
+        fclose(settings.file_hits);
+    }
+    free(fps_buffer);
+    fprintf(stderr, "\n");
+}
+
 int main(int argc, char **argv) {
     /* Get rid of unused warning */
     (void) argv;
@@ -148,24 +152,20 @@ int main(int argc, char **argv) {
 
     /* FPS and other stats initialization */
     gettimeofday(&start_time, NULL);
-    fps_buffer = (uint *) calloc(FPS_BUFFER_SIZE, sizeof(fps_buffer[0]));
+    fps_buffer = calloc(FPS_BUFFER_SIZE, sizeof(fps_buffer));
     signal(SIGUSR1, signal_usr1_handler);
 
-    out_file = fopen(settings.file_out_name, "ab");
-    stat_file = fopen(settings.file_hits_name, "a");
+    settings.file_out = fopen(settings.file_out_name, "ab");
+    settings.file_hits = fopen(settings.file_hits_name, "a");
 
     open_device();
     init_device();
     start_capturing();
     main_loop();
     stop_capturing();
-    uninit_device();
-    close_device();
 
-    fclose(out_file);
-    free(fps_buffer);
+    pre_exit_cleanup();
 
-    fprintf(stderr, "\n");
     return EXIT_SUCCESS;
 }
 

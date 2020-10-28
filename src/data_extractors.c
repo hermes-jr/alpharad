@@ -20,27 +20,25 @@ extern struct settings settings;
 bytes_spawned process_image_default(const uint8_t *p, uint size) {
     bytes_spawned result = {0, NULL};
 
-    points_detected points = get_all_flashes(p, size, false);
+    points_detected points = get_all_flashes(p, size, FULL_SCAN);
 
     if (points.len == 0) {
         return result;
     }
 
     for (uint i = 0; i < points.len; i++) {
-        uint cp = points.arr[i];
+        coordinate cp = points.arr[i];
 
+        uint as_idx = settings.width * cp.y + cp.x;
         uint8_t coord_as_byte = round(
-                ((double) cp / (size - settings.width * 2 - settings.height * 2 - 1)) * UINT8_MAX);
+                ((double) as_idx / (settings.width * settings.height - 1)) * UINT8_MAX);
 
         result.len++;
         result.arr = realloc(result.arr, result.len);
         result.arr[result.len - 1] = coord_as_byte;
 
         bytes++;
-        D(printf("Flash at %3d:%3d (%d) generated: %3d\n", (cp % settings.width * 2) / 2, cp / (settings.width * 2), cp,
-                 coord_as_byte));
-
-//        log_flash_at_coordinates(x, y);
+        D(printf("Flash at %3d:%3d (%d) generated: %3d\n", cp.x, cp.y, as_idx, coord_as_byte));
     }
 
     free(points.arr);

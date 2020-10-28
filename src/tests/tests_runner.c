@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
             {"Image processor wrapper function test", test_image_wrapper},
             {"Image processor should detect discrete groups of pixels", test_image_ccl},
             {"Image processor should use round-robin to pick a different representative each time", test_image_ccl_rr},
+            {"Detected points should be logged", test_image_logging},
             {"Duh, linked list, queue, whatever this is. Inventing the wheel", test_image_ll},
             CU_TEST_INFO_NULL
     };

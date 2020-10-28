@@ -68,7 +68,9 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
     points_detected result = {0, NULL};
 
     const uint dw = settings.width * 2;
-    uint_fast16_t *visited = calloc((size + 15) / 16, sizeof(uint_fast16_t)); // ceil(size/16.0)
+
+    /* As we don't care about color values, only half the space is enough */
+    uint_fast16_t *visited = calloc((size / 2 + 15) / 16, sizeof(uint_fast16_t)); // ceil(half_size/16.0)
 
     for (uint idx = 0; idx < size; idx += 2) {
         if (!is_pixel_lit(p, idx)) {
@@ -98,38 +100,42 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             D(printf("%d:%d, ", cx, cy));
 
             /* Skip borders, they behave weirdly in my particular camera. Should be optional though */
+/*
             if (cx == 0 || cy == 0 || cx + 1 == settings.width || cy + 1 == settings.height) {
                 continue;
             }
+*/
 
             /* Register this single point and return ASAP */
             if (mode == FIRST_ONLY) {
                 result.len = 1;
-                result.arr = malloc(sizeof(idx));
-                result.arr[0] = idx;
+                result.arr = malloc(sizeof(coordinate));
+                result.arr[0] = (coordinate) {cx, cy};
                 free(visited);
                 return result;
             }
 
             current_batch.len++;
             /* 99.99% of the time there will be no more than 4-6 reallocations per frame. Should not be a problem */
-            current_batch.arr = realloc(current_batch.arr, current_batch.len * sizeof(current_batch.arr));
-            current_batch.arr[current_batch.len - 1] = inner_idx;
+            current_batch.arr = realloc(current_batch.arr, current_batch.len * sizeof(coordinate));
+            current_batch.arr[current_batch.len - 1] = (coordinate) {cx, cy};
 
             enqueue_neighbors(visited, &queue, inner_idx, cx, cy);
 
         } while (queue != NULL);
         D(printf("}\n"));
 
+        if (current_batch.len == 0) {
+            continue;
+        }
+
         /* We have a region now, select a representative */
         result.len++;
-        result.arr = realloc(result.arr, result.len * sizeof(result.arr));
+        result.arr = realloc(result.arr, result.len * sizeof(coordinate));
         result.arr[result.len - 1] = current_batch.arr[rr++ % current_batch.len];
         free(current_batch.arr);
 
-        // FIXME: flash logging should be done differently. This is just for debugging
-        printf("%d:%d\n", (result.arr[result.len - 1] % dw) / 2, result.arr[result.len - 1] / dw);
-        fflush(stdout);
+        log_flash_at_coordinates(result.arr + result.len - 1);
     }
 
     free(visited);
@@ -137,13 +143,13 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
 }
 
 /* Add neighbors to the queue. 8-connectivity, in reading order */
-void enqueue_neighbors(const uint_fast16_t *visited, node_t **queue, uint inner_idx, uint cx, uint cy) {
+inline void enqueue_neighbors(const uint_fast16_t *visited, node_t **queue, uint inner_idx, uint cx, uint cy) {
     /* Too lazy to optimize this crap. Maybe later */
     const uint dw = settings.width * 2;
     bool up = cy > 0;
-    bool down = cy < settings.height;
+    bool down = cy < settings.height - 1;
     bool left = cx > 0;
-    bool right = cx < settings.width;
+    bool right = cx < settings.width - 1;
     /* In reading order for no particular reason other than to simplify testing */
     if (up && left && !check_visited(visited, inner_idx - dw - 2)) {
         push_item(queue, inner_idx - dw - 2); // NW
@@ -172,10 +178,12 @@ void enqueue_neighbors(const uint_fast16_t *visited, node_t **queue, uint inner_
 }
 
 inline void mark_visited(uint_fast16_t *visited, uint idx) {
+    idx /= 2; // We never visit Cb and Cr bytes in YUV
     visited[idx / 16] |= 1u << (idx % 16);
 }
 
 inline uint check_visited(uint_fast16_t const *visited, uint idx) {
+    idx /= 2; // We never visit Cb and Cr bytes in YUV
     return visited[idx / 16] & 1u << (idx % 16);
 }
 
@@ -194,6 +202,17 @@ bool has_flashes(const uint8_t *p, uint size) {
         return false;
     }
 }
+
+void log_flash_at_coordinates(coordinate *c) {
+    if (settings.file_hits == NULL) {
+        return;
+    }
+    char buf[32];
+    snprintf(buf, 32, "%d:%d\n", c->x, c->y);
+    fputs(buf, settings.file_hits);
+    fflush(settings.file_hits);
+}
+
 
 /* Return true if requested byte value is greater than settings.threshold */
 bool is_pixel_lit(const uint8_t *p, uint idx) { return p[idx] > settings.threshold; }

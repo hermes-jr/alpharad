@@ -29,6 +29,8 @@ struct settings {
     char *dev_name;
     char *file_hits_name;
     char *file_out_name;
+    FILE *file_hits;
+    FILE *file_out;
 };
 
 int populate_settings(int argc, char **argv, FILE *ofp);

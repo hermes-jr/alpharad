@@ -20,9 +20,11 @@ void test_image_wrapper(void);
 
 void test_image_empty(void);
 
+void test_image_logging(void);
+
 void test_image_ll(void);
 
-uint xy_to_yuv(uint x, uint y);
+uint cartesian_to_yuv(coordinate c);
 
 void dump_list(node_t *head);
 

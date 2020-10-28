@@ -43,12 +43,12 @@ void test_data_default(void) {
     CU_ASSERT_EQUAL(result.len, 0)
 
     /* Each flash should spawn one byte */
-    mock_frame[coord1] = mock_frame[coord3] = 0xFF;
+    mock_frame[0] = mock_frame[screen_buffer_size - 4] = 0xFF;
 
     result = process_image_default(mock_frame, screen_buffer_size);
     CU_ASSERT_EQUAL_FATAL(result.len, 2)
     CU_ASSERT_PTR_NOT_EQUAL_FATAL(result.arr, NULL)
-    CU_ASSERT_EQUAL(result.arr[0], 1) // FIXME: expected 0 tbh, but this method is shitty anyway, unimportant
+    CU_ASSERT_EQUAL(result.arr[0], 0)
     CU_ASSERT_EQUAL(result.arr[1], 255)
 
     free(result.arr);

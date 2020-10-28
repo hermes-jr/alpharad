@@ -6,7 +6,9 @@
 struct settings settings = {
         .dev_name = "/dev/video0",
         .file_out_name = "out.dat",
+        .file_out = NULL,
         .file_hits_name = "points.log",
+        .file_hits = NULL,
         .frame_processor = PROC_DEFAULT,
         .width = 640,
         .height = 480,

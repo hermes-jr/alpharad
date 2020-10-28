@@ -10,6 +10,21 @@ void settings_test_init(void) {
     optind = 1;
 }
 
+/* Restore whatever was ruined by test */
+void settings_test_teardown(void) {
+    settings.dev_name = S_DEFAULT_DEV_NAME;
+    settings.file_out_name = S_DEFAULT_FILE_OUT_NAME;
+    settings.file_out = S_DEFAULT_FILE_OUT;
+    settings.file_hits_name = S_DEFAULT_FILE_HITS_NAME;
+    settings.file_hits = S_DEFAULT_FILE_HITS;
+    settings.frame_processor = S_DEFAULT_FRAME_PROCESSOR;
+    settings.width = S_DEFAULT_WIDTH;
+    settings.height = S_DEFAULT_HEIGHT;
+    settings.crop = S_DEFAULT_CROP;
+    settings.threshold = S_DEFAULT_THRESHOLD;
+    settings.verbose = S_DEFAULT_VERBOSE;
+}
+
 void test_settings_population_dimensions(void) {
     char **argv = (char *[]) {"prog", "--geometry=100:200"};
     populate_settings(2, argv, stdout);
@@ -78,4 +93,44 @@ void test_settings_population_verbose(void) {
     char **argv = (char *[]) {"prog", "-v", "3"};
     populate_settings(3, argv, stdout);
     CU_ASSERT_EQUAL(settings.verbose, 3u)
+}
+
+void test_settings_population_crop(void) {
+    CU_ASSERT_EQUAL(settings.crop, 0u)
+    char **argv = (char *[]) {"prog", "-b", "7"};
+    populate_settings(3, argv, stdout);
+    CU_ASSERT_EQUAL(settings.crop, 7u)
+}
+
+void test_settings_population_help(void) {
+    const size_t limit = 1024;
+    char mock_buf[limit];
+    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+
+    char **argv_h = (char *[]) {"prog", "-h"};
+    int settings_ret = populate_settings(2, argv_h, mock_out);
+    fflush(mock_out);
+
+    /* This is ok situation, return value should indicate exit with success */
+    CU_ASSERT_EQUAL(settings_ret, 1)
+    CU_ASSERT_NSTRING_EQUAL(mock_buf, "Usage: prog", 11)
+
+    fclose(mock_out);
+}
+
+void test_settings_unrecognized_option(void) {
+    const size_t limit = 1024;
+    char mock_buf[limit];
+    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+
+    /* Passing unknown option should lead to help message being printed and failure exit code */
+    char **argv_h = (char *[]) {"prog", "--this-should-be-an-unsupported-parameter-name"};
+    int settings_ret = populate_settings(2, argv_h, mock_out);
+    fflush(mock_out);
+
+    /* Expect fatal error and help printed */
+    CU_ASSERT_EQUAL(settings_ret, -1)
+    CU_ASSERT_NSTRING_EQUAL(mock_buf, "Usage: prog", 11)
+
+    fclose(mock_out);
 }

@@ -20,9 +20,22 @@ enum frame_processor {
 #endif //HAVE_OPENSSL
 };
 
+#define S_DEFAULT_DEV_NAME "/dev/video0"
+#define S_DEFAULT_FILE_OUT_NAME "out.dat"
+#define S_DEFAULT_FILE_OUT NULL
+#define S_DEFAULT_FILE_HITS_NAME "points.log"
+#define S_DEFAULT_FILE_HITS NULL
+#define S_DEFAULT_FRAME_PROCESSOR PROC_DEFAULT
+#define S_DEFAULT_WIDTH 640
+#define S_DEFAULT_HEIGHT 480
+#define S_DEFAULT_CROP 0
+#define S_DEFAULT_THRESHOLD 8u
+#define S_DEFAULT_VERBOSE 0
+
 struct settings {
     uint width;
     uint height;
+    uint crop;
     uint8_t threshold;
     uint8_t verbose;
     enum frame_processor frame_processor;
@@ -35,6 +48,8 @@ struct settings {
 
 int populate_settings(int argc, char **argv, FILE *ofp);
 
-void print_usage(char *self_name);
+void print_usage(FILE *ofp, char *self_name);
+
+int validated_long_parse(FILE *ofp, uint *target, char *input, const char *err_msg);
 
 #endif //ALPHARAD_SETTINGS_H

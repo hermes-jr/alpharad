@@ -99,12 +99,12 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             uint cy = inner_idx / dw;
             D(printf("%d:%d, ", cx, cy));
 
-            /* Skip borders, they behave weirdly in my particular camera. Should be optional though */
-/*
-            if (cx == 0 || cy == 0 || cx + 1 == settings.width || cy + 1 == settings.height) {
+            /* Skip borders (n pixels thick), they behave weirdly in my particular camera */
+            uint n_crop = settings.crop;
+            if (n_crop > 0 && (cx <= n_crop || cy <= n_crop || cx + n_crop + 1 == settings.width ||
+                               cy + n_crop + 1 == settings.height)) {
                 continue;
             }
-*/
 
             /* Register this single point and return ASAP */
             if (mode == FIRST_ONLY) {

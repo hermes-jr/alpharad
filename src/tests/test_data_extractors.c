@@ -13,7 +13,6 @@ extern struct settings settings;
 
 uint coord1;
 uint coord2;
-uint coord3;
 uint8_t *mock_frame;
 uint screen_buffer_size;
 
@@ -29,7 +28,6 @@ void data_extractors_test_init(void) {
     /* Common test points */
     coord1 = settings.width * 2 + 2; // x=1 y=1
     coord2 = settings.width * 2 + 6; // x=3 y=1
-    coord3 = settings.width * (settings.height - 1) * 2 - 4; // x=next_to_last y=next_to_last
 }
 
 /* Free fake frame buffer */

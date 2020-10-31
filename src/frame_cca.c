@@ -104,11 +104,8 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             uint cy = inner_idx / dw;
 
 #ifdef DEBUG
-            if (settings.verbose >= LOG_TRACE) {
-                /* Dump everything */
-                printf("%d:%d, ", cx, cy);
-            } else if (trim < DEBUG_OUT_TRIM_LIMIT && settings.verbose == LOG_DEBUG) {
-                /* There might be many neighbors, print only a few */
+            /* Dump everything if TRACE; trim to only a few if DEBUG (there might be a lot of neighbors) */
+            if (settings.verbose >= LOG_TRACE || (trim < DEBUG_OUT_TRIM_LIMIT && settings.verbose == LOG_DEBUG)) {
                 printf("%d:%d, ", cx, cy);
             }
             trim++;

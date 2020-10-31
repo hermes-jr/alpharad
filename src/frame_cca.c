@@ -124,6 +124,10 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
                 result.arr = malloc(sizeof(coordinate));
                 result.arr[0] = (coordinate) {cx, cy};
                 free(visited);
+
+                D(log_p(LOG_DEBUG, "}\n"));
+                log_flash_at_coordinates(result.arr);
+
                 return result;
             }
 

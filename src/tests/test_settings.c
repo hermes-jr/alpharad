@@ -1,9 +1,15 @@
 #include <CUnit/Basic.h>
 #include "../settings.h"
+#include "../data_extractors.h"
 #include "test_settings.h"
 #include <getopt.h>
 
 extern struct settings settings;
+
+int settings_suite_init(void) {
+    register_processors();
+    return 0;
+}
 
 /* Reset getopt state to supply new vector each time */
 void settings_test_init(void) {
@@ -17,7 +23,7 @@ void settings_test_teardown(void) {
     settings.file_out = S_DEFAULT_FILE_OUT;
     settings.file_hits_name = S_DEFAULT_FILE_HITS_NAME;
     settings.file_hits = S_DEFAULT_FILE_HITS;
-    settings.frame_processor = S_DEFAULT_FRAME_PROCESSOR;
+    settings.frame_processor = (frame_processor_t) S_DEFAULT_FRAME_PROCESSOR;
     settings.width = S_DEFAULT_WIDTH;
     settings.height = S_DEFAULT_HEIGHT;
     settings.crop = S_DEFAULT_CROP;
@@ -27,7 +33,7 @@ void settings_test_teardown(void) {
 
 void test_settings_population_dimensions(void) {
     char **argv = (char *[]) {"prog", "--geometry=100:200"};
-    populate_settings(2, argv, stdout);
+    populate_settings(stdout, argv, 2);
     CU_ASSERT_EQUAL(settings.width, 100)
     CU_ASSERT_EQUAL(settings.height, 200)
 }
@@ -38,7 +44,7 @@ void test_settings_incorrect_width(void) {
     FILE *mock_out = fmemopen(mock_buf, limit, "w+");
 
     char **argv_w = (char *[]) {"prog", "--geometry=FOOBAR:-1"};
-    int settings_ret = populate_settings(2, argv_w, mock_out);
+    int settings_ret = populate_settings(mock_out, argv_w, 2);
     fflush(mock_out);
 
     /* Expect fatal error */
@@ -54,7 +60,7 @@ void test_settings_incorrect_height(void) {
     FILE *mock_out = fmemopen(mock_buf, limit, "w+");
 
     char **argv_h = (char *[]) {"prog", "--geometry=640:FOOBAR"};
-    int settings_ret = populate_settings(2, argv_h, mock_out);
+    int settings_ret = populate_settings(mock_out, argv_h, 2);
     fflush(mock_out);
 
     /* Expect fatal error */
@@ -67,14 +73,14 @@ void test_settings_incorrect_height(void) {
 void test_settings_population_device(void) {
     char *dn = "/dev/some_device";
     char **argv = (char *[]) {"prog", "--device", dn};
-    populate_settings(3, argv, stdout);
+    populate_settings(stdout, argv, 3);
     CU_ASSERT_STRING_EQUAL(settings.dev_name, dn)
 }
 
 void test_settings_population_outfile(void) {
     char *ofn = "test_out";
     char **argv = (char *[]) {"prog", "-o", ofn};
-    int settings_ret = populate_settings(3, argv, stdout);
+    int settings_ret = populate_settings(stdout, argv, 3);
 
     /* Expect no error */
     CU_ASSERT_EQUAL(settings_ret, 0)
@@ -84,21 +90,21 @@ void test_settings_population_outfile(void) {
 void test_settings_population_logfile(void) {
     char *hln = "test_log";
     char **argv = (char *[]) {"prog", "--hits-file", hln};
-    populate_settings(3, argv, stdout);
+    populate_settings(stdout, argv, 3);
     CU_ASSERT_STRING_EQUAL(settings.file_hits_name, hln)
 }
 
 void test_settings_population_verbose(void) {
     CU_ASSERT_EQUAL(settings.verbose, 0u)
     char **argv = (char *[]) {"prog", "-v", "3"};
-    populate_settings(3, argv, stdout);
+    populate_settings(stdout, argv, 3);
     CU_ASSERT_EQUAL(settings.verbose, 3u)
 }
 
 void test_settings_population_crop(void) {
     CU_ASSERT_EQUAL(settings.crop, 0u)
     char **argv = (char *[]) {"prog", "-b", "7"};
-    populate_settings(3, argv, stdout);
+    populate_settings(stdout, argv, 3);
     CU_ASSERT_EQUAL(settings.crop, 7u)
 }
 
@@ -108,7 +114,7 @@ void test_settings_population_help(void) {
     FILE *mock_out = fmemopen(mock_buf, limit, "w+");
 
     char **argv_h = (char *[]) {"prog", "-h"};
-    int settings_ret = populate_settings(2, argv_h, mock_out);
+    int settings_ret = populate_settings(mock_out, argv_h, 2);
     fflush(mock_out);
 
     /* This is ok situation, return value should indicate exit with success */
@@ -125,12 +131,53 @@ void test_settings_unrecognized_option(void) {
 
     /* Passing unknown option should lead to help message being printed and failure exit code */
     char **argv_h = (char *[]) {"prog", "--this-should-be-an-unsupported-parameter-name"};
-    int settings_ret = populate_settings(2, argv_h, mock_out);
+    int settings_ret = populate_settings(mock_out, argv_h, 2);
     fflush(mock_out);
 
     /* Expect fatal error and help printed */
     CU_ASSERT_EQUAL(settings_ret, -1)
     CU_ASSERT_NSTRING_EQUAL(mock_buf, "Usage: prog", 11)
+
+    fclose(mock_out);
+}
+
+
+void test_settings_population_mode(void) {
+    CU_ASSERT_PTR_NOT_EQUAL(settings.frame_processor.execute, process_image_comparator)
+
+    char **argv_h = (char *[]) {"prog", "-m", "COMPARATOR"};
+    int settings_ret = populate_settings(stdout, argv_h, 3);
+
+    CU_ASSERT_EQUAL(settings_ret, 0)
+    CU_ASSERT_PTR_EQUAL(settings.frame_processor.execute, process_image_comparator)
+}
+
+void test_settings_population_mode_unrecognized(void) {
+    const size_t limit = 1024;
+    char mock_buf[limit];
+    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+
+    char **argv_h = (char *[]) {"prog", "-m", "shit"};
+    int settings_ret = populate_settings(mock_out, argv_h, 3);
+    fflush(mock_out);
+
+    CU_ASSERT_EQUAL(settings_ret, -1)
+    CU_ASSERT_NSTRING_EQUAL(mock_buf, "Unsupported processor requested", 31)
+
+    fclose(mock_out);
+}
+
+void test_settings_population_print_modes(void) {
+    const size_t limit = 1024;
+    char mock_buf[limit];
+    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+
+    char **argv_h = (char *[]) {"prog", "-M"};
+    int settings_ret = populate_settings(mock_out, argv_h, 2);
+    fflush(mock_out);
+
+    CU_ASSERT_EQUAL(settings_ret, 1)
+    CU_ASSERT_NSTRING_EQUAL(mock_buf, "DEFAULT", 7)
 
     fclose(mock_out);
 }

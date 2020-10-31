@@ -51,6 +51,22 @@ void print_usage(FILE *ofp, char *self_name) {
             self_name, PROJECT_VERSION, settings.dev_name, settings.width, settings.height, settings.file_out_name);
 }
 
+void print_supported_modes(FILE *ofp) {
+    for (short i = 0; i >= 0; i++) {
+        frame_processor_t p = registered_processors[i];
+        if (is_processor_null(&p)) {
+            break;
+        }
+        if (p.code != NULL && p.description != NULL) {
+            fprintf(ofp, "%-30s %s\n", p.code, p.description);
+        }
+    }
+}
+
+bool is_processor_null(frame_processor_t *p) {
+    return (*p).description == NULL && (*p).code == NULL && (*p).execute == NULL;
+}
+
 /**
  * Handle user input and attempt to fill in fields of settings object
  *
@@ -59,7 +75,7 @@ void print_usage(FILE *ofp, char *self_name) {
  * @param ofp file pointer to write messages to. For the sake of test coverage
  * @return 0 if no action should be taken; -1 if should exit with error code; 1 if should exit with success
  */
-int populate_settings(int argc, char **argv, FILE *ofp) {
+int populate_settings(FILE *ofp, char **argv, int argc) {
 
     for (;;) {
         int idx;
@@ -98,7 +114,7 @@ int populate_settings(int argc, char **argv, FILE *ofp) {
                     return -1;
                 }
 
-                log_fp(LOG_DEBUG, ofp, "w h %d %d\n", settings.width, settings.height);
+                log_fp(LOG_DEBUG, ofp, "Dimensions: %d:%d\n", settings.width, settings.height);
                 break;
             }
 
@@ -106,31 +122,48 @@ int populate_settings(int argc, char **argv, FILE *ofp) {
                 if (validated_long_parse(ofp, &(settings.crop), optarg, "Couldn't parse option 'b'")) {
                     return -1;
                 }
+                log_fp(LOG_DEBUG, ofp, "Border crop: %d\n", settings.crop);
                 break;
             }
 
             case 'l':
                 settings.file_hits_name = optarg;
+                log_fp(LOG_DEBUG, ofp, "Hits file: %s\n", settings.file_hits_name);
                 break;
 
             case 'o':
                 settings.file_out_name = optarg;
+                log_fp(LOG_DEBUG, ofp, "Out file: %s\n", settings.file_hits_name);
                 break;
 
-            case 'm':
-                // FIXME: implement mode selection
-                fprintf(ofp, "Mode select: implement");
+            case 'm': {
+                frame_processor_t selected;
+                for (short i = 0; i >= 0; i++) {
+                    selected = registered_processors[i];
+                    // TODO: feels somewhat unsafe here
+                    if (is_processor_null(&selected) || strcasecmp(selected.code, optarg) == 0) {
+                        break;
+                    }
+                }
+                if (is_processor_null(&selected)) {
+                    fprintf(ofp, "Unsupported processor requested. Retry with -M option\n");
+                    return -1;
+                }
+                settings.frame_processor = selected;
+                log_fp(LOG_DEBUG, ofp, "Processor: %s\n", settings.frame_processor.code);
                 break;
+            }
 
             case 'M':
-                // FIXME: implement print_supported_modes();
-                fprintf(ofp, "Supported modes: implement");
+                print_supported_modes(ofp);
                 return 1;
 
             case 'v':
                 settings.verbose = strtol(optarg, NULL, 0);
-                if (errno)
+                if (errno) {
                     fprintf(ofp, "Couldn't parse option 'v' %s", optarg);
+                }
+                log_fp(LOG_DEBUG, ofp, "Verbosity: %d\n", settings.verbose);
                 break;
 
             case 'h':

@@ -24,6 +24,9 @@ int main(int argc, char **argv) {
             {"Logfile should be set", test_settings_population_logfile},
             {"Verbosity level should be set", test_settings_population_verbose},
             {"Border cropping should be set", test_settings_population_crop},
+            {"Mode should be set", test_settings_population_mode},
+            {"Incorrect mode should be reported", test_settings_population_mode_unrecognized},
+            {"Mode list should be printed", test_settings_population_print_modes},
             {"Help option behavior", test_settings_population_help},
             {"Help should be printed if unrecognized option passed", test_settings_unrecognized_option},
             CU_TEST_INFO_NULL
@@ -64,7 +67,8 @@ int main(int argc, char **argv) {
 
     // Suites
     CU_SuiteInfo suites[] = {
-            {"Settings suite", NULL, NULL, settings_test_init, settings_test_teardown, settings_suite_tests},
+            {"Settings suite", settings_suite_init, NULL, settings_test_init, settings_test_teardown,
+             settings_suite_tests},
             {"Image processing suite", NULL, NULL, image_processing_test_init, image_processing_test_teardown,
              image_processing_suite_tests},
             {"Data extraction suite", NULL, NULL, data_extractors_test_init, data_extractors_test_teardown,

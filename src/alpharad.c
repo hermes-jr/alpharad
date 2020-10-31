@@ -21,24 +21,7 @@ uint *fps_buffer;
 uint8_t fps_buffer_idx = 0;
 
 void process_image(const uint8_t *p, uint size) {
-    bytes_spawned bs;
-    switch (settings.frame_processor) {
-#if HAVE_OPENSSL
-        case PROC_SHA256_NON_BLANK_FRAMES_ONLY:
-            bs = process_image_sha256_non_blank_frames(p, size);
-            break;
-        case PROC_SHA256_ALL_FRAMES:
-            bs = process_image_sha256_all_frames(p, size);
-            break;
-#endif //HAVE_OPENSSL
-        case PROC_COMPARATOR:
-            bs = process_image_comparator(p, size);
-            break;
-        case PROC_DEFAULT:
-        default:
-            bs = process_image_default(p, size);
-            break;
-    }
+    bytes_spawned bs = settings.frame_processor.execute(p, size);
 
     if (bs.len > 0) {
         if (settings.file_out != NULL) {
@@ -146,8 +129,9 @@ int main(int argc, char **argv) {
     (void) argv;
     (void) argc;
 
-    log_p(LOG_DEBUG, "Reading settings\n");
-    int settings_ret = populate_settings(argc, argv, stdout);
+    register_processors();
+
+    int settings_ret = populate_settings(stdout, argv, argc);
     if (settings_ret == -1) {
         exit(EXIT_FAILURE);
     } else if (settings_ret == 1) {
@@ -156,6 +140,10 @@ int main(int argc, char **argv) {
     /* Avoid division by zero */
     assert(settings.width > 2);
     assert(settings.height > 2);
+
+    if (is_processor_null(&settings.frame_processor)) {
+        settings.frame_processor = registered_processors[0];
+    }
 
     /* FPS and other stats initialization */
     log_p(LOG_INFO, "Initializing FPS buffer\n");

@@ -116,3 +116,38 @@ void print_buf_byte_state(ushort buf_byte_counter) {
     }
     printf("\n");
 }
+
+/* Fill array of available data extractors */
+void register_processors(void) {
+    /*
+     * Important!
+     * Default processor should always be first (this code relies on it).
+     * The last one should always be all-NULLs, otherwise we will run into endless loop.
+     */
+    static frame_processor_t processors[] = {
+            {"DEFAULT",
+             "Produces normally distributed values",
+             process_image_default},
+
+#if HAVE_OPENSSL
+            {"SHA256",
+             "Calculate SHA256 hash only from frames with detected flashes. Better than SHA256_ALL."
+             "Uniform distribution",
+             process_image_sha256_non_blank_frames},
+
+            {"SHA256_ALL",
+             "Hash is calculated from each frame, which will be mostly black. Thermal noise gives some entropy. "
+             "Also uniform distribution. Fastest method (32 bytes per frame)",
+             process_image_sha256_all_frames},
+#endif //HAVE_OPENSSL
+
+            {"COMPARATOR",
+             "Compares two independent values from two consequent frames (with detection) "
+             "and spawns a bit. This is the slowest method so far, "
+             "it yields approximately 1 byte per 8 flashes",
+             process_image_comparator},
+
+            FRAME_PROCESSOR_NULL
+    };
+    registered_processors = processors;
+}

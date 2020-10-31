@@ -102,4 +102,6 @@ cmake-build-debug-coverage
 qa/screenshots/
 /out.dat
 /points.log
+/out.dat.bak
+/points.log.bak
 alpharad.cbp

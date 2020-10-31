@@ -19,6 +19,7 @@
 
 #include "settings.h"
 #include "v4l2_util.h"
+#include "logger.h"
 
 extern struct settings settings;
 static uint8_t n_buffers;
@@ -111,8 +112,8 @@ void init_mmap(void) {
 
     if (-1 == xioctl(device, VIDIOC_REQBUFS, &req)) {
         if (EINVAL == errno) {
-            fprintf(stderr, "%s does not support "
-                            "memory mapping\n", settings.dev_name);
+            log_p(LOG_FATAL, "%s does not support memory mapping. Error %d, %s\n",
+                   settings.dev_name, errno, strerror(errno));
             exit(EXIT_FAILURE);
         } else {
             errno_exit("VIDIOC_REQBUFS");
@@ -120,15 +121,16 @@ void init_mmap(void) {
     }
 
     if (req.count < 2) {
-        fprintf(stderr, "Insufficient buffer memory on %s\n",
-                settings.dev_name);
+        log_p(LOG_FATAL, "Insufficient buffer memory on %s\n",
+               settings.dev_name);
         exit(EXIT_FAILURE);
     }
 
     buffers = calloc(req.count, sizeof(*buffers));
 
     if (!buffers) {
-        fprintf(stderr, "Out of memory\n");
+        log_p(LOG_FATAL, "Out of memory\n",
+               settings.dev_name);
         exit(EXIT_FAILURE);
     }
 
@@ -176,8 +178,8 @@ void init_device(void) {
 
     if (-1 == xioctl(device, VIDIOC_QUERYCAP, &cap)) {
         if (EINVAL == errno) {
-            fprintf(stderr, "%s is no V4L2 device\n",
-                    settings.dev_name);
+            log_p(LOG_FATAL, "%s is no V4L2 device. Error %d, %s\n",
+                   settings.dev_name, errno, strerror(errno));
             exit(EXIT_FAILURE);
         } else {
             errno_exit("VIDIOC_QUERYCAP");
@@ -185,14 +187,14 @@ void init_device(void) {
     }
 
     if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
-        fprintf(stderr, "%s is no video capture device\n",
-                settings.dev_name);
+        log_p(LOG_FATAL, "%s is no video capture device\n",
+               settings.dev_name);
         exit(EXIT_FAILURE);
     }
 
     if (!(cap.capabilities & V4L2_CAP_STREAMING)) {
-        fprintf(stderr, "%s does not support streaming i/o\n",
-                settings.dev_name);
+        log_p(LOG_FATAL, "%s does not support streaming i/o\n",
+               settings.dev_name);
         exit(EXIT_FAILURE);
     }
 
@@ -259,26 +261,27 @@ void open_device(void) {
     struct stat st;
 
     if (-1 == stat(settings.dev_name, &st)) {
-        fprintf(stderr, "Cannot identify '%s': %d, %s\n",
-                settings.dev_name, errno, strerror(errno));
+        log_p(LOG_FATAL, "Cannot identify %s. Error %d, %s\n",
+               settings.dev_name, errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     if (!S_ISCHR(st.st_mode)) {
-        fprintf(stderr, "%s is no device\n", settings.dev_name);
+        log_p(LOG_FATAL, "Bad device %s. Error %d, %s\n",
+               settings.dev_name, errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     device = open(settings.dev_name, O_RDWR /* required */ | O_NONBLOCK, 0);
 
     if (-1 == device) {
-        fprintf(stderr, "Cannot open '%s': %d, %s\n",
-                settings.dev_name, errno, strerror(errno));
+        log_p(LOG_FATAL, "Can't open %s. Error %d, %s\n",
+               settings.dev_name, errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
 }
 
 void errno_exit(const char *s) {
-    fprintf(stderr, "%s error %d, %s\n", s, errno, strerror(errno));
+    log_p(LOG_FATAL, "%s. Error %d, %s\n", s, errno, strerror(errno));
     exit(EXIT_FAILURE);
 }

@@ -15,6 +15,7 @@ extern ulong bytes;
 
 int device = -1;
 static struct timeval start_time;
+static volatile bool exit_requested = false;
 
 uint *fps_buffer;
 uint8_t fps_buffer_idx = 0;
@@ -64,13 +65,13 @@ static void print_perf_stats(void) {
 /* Get average frame processing time from a circular buffer, estimate Frames Per Second */
 float fps_rolling_average(void) {
     float sum = 0u;
-    D(printf("Frame durations rolling buffer: "));
+    D(log_p(LOG_DEBUG, "Frame durations rolling buffer: "));
     for (int j = 0; j < FPS_BUFFER_SIZE; j++) {
-        D(printf("%d, ", fps_buffer[j]));
+        D(log_p(LOG_DEBUG, "%d, ", fps_buffer[j]));
         sum += fps_buffer[j];
     }
     float avg_frame_time = sum / FPS_BUFFER_SIZE;
-    D(printf("\nAVG frame time: %fns\n", avg_frame_time));
+    D(log_p(LOG_DEBUG, "\nAVG frame time: %fns\n", avg_frame_time));
     return 1.0e6f / avg_frame_time;
 }
 
@@ -78,7 +79,7 @@ static void main_loop(void) {
 
     struct timeval frame_start, frame_end, frame_duration;
 
-    for (;;) {
+    for (; !exit_requested;) {
         gettimeofday(&frame_start, NULL);
         fd_set fds;
         struct timeval tv;
@@ -100,12 +101,12 @@ static void main_loop(void) {
         }
 
         if (0 == r) {
-            fprintf(stderr, "select timeout\n");
+            log_fp(LOG_FATAL, stderr, "select timeout\n");
             exit(EXIT_FAILURE);
         }
 
         if (!read_frame(&process_image)) {
-            fprintf(stderr, "recording error\n");
+            log_fp(LOG_FATAL, stderr, "recording error\n");
             break;
         }
 
@@ -121,6 +122,12 @@ static void signal_usr1_handler(int signum) {
     }
 }
 
+static void signal_sigint_handler(int signum) {
+    if (SIGINT == signum) {
+        exit_requested = true;
+    }
+}
+
 static void pre_exit_cleanup(void) {
     uninit_device();
     close_device();
@@ -132,7 +139,6 @@ static void pre_exit_cleanup(void) {
         fclose(settings.file_hits);
     }
     free(fps_buffer);
-    fprintf(stderr, "\n");
 }
 
 int main(int argc, char **argv) {
@@ -140,6 +146,7 @@ int main(int argc, char **argv) {
     (void) argv;
     (void) argc;
 
+    log_p(LOG_DEBUG, "Reading settings\n");
     int settings_ret = populate_settings(argc, argv, stdout);
     if (settings_ret == -1) {
         exit(EXIT_FAILURE);
@@ -151,21 +158,29 @@ int main(int argc, char **argv) {
     assert(settings.height > 2);
 
     /* FPS and other stats initialization */
+    log_p(LOG_INFO, "Initializing FPS buffer\n");
     gettimeofday(&start_time, NULL);
     fps_buffer = calloc(FPS_BUFFER_SIZE, sizeof(fps_buffer));
     signal(SIGUSR1, signal_usr1_handler);
+    signal(SIGINT, signal_sigint_handler);
 
     settings.file_out = fopen(settings.file_out_name, "ab");
     settings.file_hits = fopen(settings.file_hits_name, "a");
 
+    log_p(LOG_INFO, "Opening video device\n");
     open_device();
+    log_p(LOG_INFO, "Initializing video device\n");
     init_device();
+    log_p(LOG_INFO, "Start capturing\n");
     start_capturing();
     main_loop();
+    log_p(LOG_INFO, "Main loop is over, stopping\n");
     stop_capturing();
 
+    log_p(LOG_INFO, "Cleaning up\n");
     pre_exit_cleanup();
 
+    log_p(LOG_INFO, "Bye\n");
     return EXIT_SUCCESS;
 }
 

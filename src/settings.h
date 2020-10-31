@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stdio.h>
+#include "logger.h"
 
 #ifdef DEBUG
 #  define D(x) (x)
@@ -30,7 +31,7 @@ enum frame_processor {
 #define S_DEFAULT_HEIGHT 480
 #define S_DEFAULT_CROP 0
 #define S_DEFAULT_THRESHOLD 8u
-#define S_DEFAULT_VERBOSE 0
+#define S_DEFAULT_VERBOSE LOG_FATAL
 
 struct settings {
     uint width;

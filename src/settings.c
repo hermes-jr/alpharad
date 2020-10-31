@@ -2,6 +2,7 @@
 #include <errno.h>
 #include <string.h>
 #include "settings.h"
+#include "logger.h"
 
 struct settings settings = {
         .dev_name = S_DEFAULT_DEV_NAME,
@@ -88,21 +89,21 @@ int populate_settings(int argc, char **argv, FILE *ofp) {
                 char *delimiter = ":";
                 /* Get width */
                 mode_token = strtok(provided_mode, delimiter);
-                if (validated_long_parse(ofp, &(settings.width), mode_token, "Couldn't parse width\n")) {
+                if (validated_long_parse(ofp, &(settings.width), mode_token, "Couldn't parse width")) {
                     return -1;
                 }
                 /* Get height */
                 mode_token = strtok(NULL, delimiter);
-                if (validated_long_parse(ofp, &(settings.height), mode_token, "Couldn't parse height\n")) {
+                if (validated_long_parse(ofp, &(settings.height), mode_token, "Couldn't parse height")) {
                     return -1;
                 }
 
-                D(fprintf(ofp, "w h %d %d\n", settings.width, settings.height));
+                log_fp(LOG_DEBUG, ofp, "w h %d %d\n", settings.width, settings.height);
                 break;
             }
 
             case 'b': {
-                if (validated_long_parse(ofp, &(settings.crop), optarg, "Couldn't parse option 'b'\n")) {
+                if (validated_long_parse(ofp, &(settings.crop), optarg, "Couldn't parse option 'b'")) {
                     return -1;
                 }
                 break;
@@ -118,18 +119,18 @@ int populate_settings(int argc, char **argv, FILE *ofp) {
 
             case 'm':
                 // FIXME: implement mode selection
-                fprintf(ofp, "Mode select: implement.\n");
+                fprintf(ofp, "Mode select: implement");
                 break;
 
             case 'M':
                 // FIXME: implement print_supported_modes();
-                fprintf(ofp, "Supported modes: implement.\n");
+                fprintf(ofp, "Supported modes: implement");
                 return 1;
 
             case 'v':
                 settings.verbose = strtol(optarg, NULL, 0);
                 if (errno)
-                    fprintf(ofp, "Couldn't parse option 'v' %s\n", optarg);
+                    fprintf(ofp, "Couldn't parse option 'v' %s", optarg);
                 break;
 
             case 'h':
@@ -153,7 +154,7 @@ int validated_long_parse(FILE *ofp, uint *target, char *input, const char *err_m
         *target = strtol(input, &verify_end, 0);
     }
     if (input == NULL || (errno && *target == 0) || verify_end == input) {
-        fprintf(ofp, "%s", err_msg);
+        log_fp(LOG_FATAL, ofp, "%s\n", err_msg);
         return -1;
     }
     return 0;

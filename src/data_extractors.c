@@ -38,7 +38,7 @@ bytes_spawned process_image_default(const uint8_t *p, uint size) {
         result.arr[result.len - 1] = coord_as_byte;
 
         bytes++;
-        D(printf("Flash at %3d:%3d (%d) generated: %3d\n", cp.x, cp.y, as_idx, coord_as_byte));
+        D(log_p(LOG_TRACE, "Flash at %3d:%3d (%d) generated: %3d\n", cp.x, cp.y, as_idx, coord_as_byte));
     }
 
     free(points.arr);
@@ -93,7 +93,9 @@ bool bit_accumulator(bool bit, uint8_t *ret) {
         buf_byte |= 1u;
     }
 
-    D(print_buf_byte_state(buf_byte_counter));
+#ifdef DEBUG
+    print_buf_byte_state(buf_byte_counter);
+#endif //DEBUG
 
     if (buf_byte_counter++ == 7u) {
         *ret = buf_byte;
@@ -105,6 +107,9 @@ bool bit_accumulator(bool bit, uint8_t *ret) {
 }
 
 void print_buf_byte_state(ushort buf_byte_counter) {
+    if (settings.verbose < LOG_DEBUG) {
+        return;
+    }
     printf("buf_byte[%d] changed: ", buf_byte_counter);
     for (uint i = 1u << (sizeof(buf_byte) * CHAR_BIT - 1u); i > 0; i = i / 2) {
         (buf_byte & i) ? printf("1") : printf("0");

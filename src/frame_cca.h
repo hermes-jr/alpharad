@@ -17,6 +17,8 @@ typedef struct node_t {
     struct node_t *tail;
 } node_t;
 
+#define DEBUG_OUT_TRIM_LIMIT 10
+
 /* Make it global for unit tests, improve if possible */
 uint rr;
 

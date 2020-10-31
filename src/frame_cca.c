@@ -87,7 +87,12 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
 
         push_item(&queue, idx);
 
-        D(printf("\nAnalyzing neighbors of %d:%d: { ", (idx % dw) / 2, idx / dw));
+#ifdef DEBUG
+        /* This code is executed frequently and absolutely unwanted in clean release */
+        log_p(LOG_DEBUG, "\nAnalyzing neighbors of %d:%d: { ", (idx % dw) / 2, idx / dw);
+        int trim = 0;
+#endif //DEBUG
+
         do {
             uint inner_idx = pop_item(&queue);
 
@@ -97,7 +102,17 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
 
             uint cx = (inner_idx % dw) / 2;
             uint cy = inner_idx / dw;
-            D(printf("%d:%d, ", cx, cy));
+
+#ifdef DEBUG
+            if (settings.verbose >= LOG_TRACE) {
+                /* Dump everything */
+                printf("%d:%d, ", cx, cy);
+            } else if (trim < DEBUG_OUT_TRIM_LIMIT && settings.verbose == LOG_DEBUG) {
+                /* There might be many neighbors, print only a few */
+                printf("%d:%d, ", cx, cy);
+            }
+            trim++;
+#endif //DEBUG
 
             /* Skip borders (n pixels thick), they behave weirdly in my particular camera */
             uint n_crop = settings.crop;
@@ -123,7 +138,12 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
             enqueue_neighbors(visited, &queue, inner_idx, cx, cy);
 
         } while (queue != NULL);
-        D(printf("}\n"));
+#ifdef DEBUG
+        if (settings.verbose == LOG_DEBUG && trim > DEBUG_OUT_TRIM_LIMIT) {
+            printf("...");
+        }
+        log_p(LOG_DEBUG, "}\n");
+#endif //DEBUG
 
         if (current_batch.len == 0) {
             continue;

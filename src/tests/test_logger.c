@@ -1,8 +1,37 @@
 #include <CUnit/Basic.h>
-#include "test_playground.h"
-#include <stdint.h>
-#include <stdlib.h>
+#include "../logger.h"
+#include "../settings.h"
+
+extern struct settings settings;
 
 void test_logger_levels(void) {
-    printf("aaa\n");
+    uint8_t original_verbosity = settings.verbose;
+
+    const char *test_message = "Test me";
+
+    const size_t limit = 1024;
+    char *mock_buf = calloc(limit, sizeof(mock_buf));
+    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+
+    /* Lower levels should not be logged */
+    settings.verbose = LOG_FATAL;
+    log_fp(LOG_INFO, mock_out, test_message);
+    fflush(mock_out);
+
+    CU_ASSERT_NSTRING_EQUAL(mock_buf, "", 7)
+
+    /* Same or higher will be logged */
+    settings.verbose = LOG_INFO;
+    log_fp(LOG_INFO, mock_out, test_message);
+    fflush(mock_out);
+    CU_ASSERT_NSTRING_EQUAL(mock_buf, test_message, 7)
+
+    settings.verbose = LOG_TRACE;
+    log_fp(LOG_INFO, mock_out, test_message);
+    fflush(mock_out);
+    CU_ASSERT_NSTRING_EQUAL(mock_buf, test_message, 7)
+
+    settings.verbose = original_verbosity;
+    free(mock_buf);
+    fclose(mock_out);
 }

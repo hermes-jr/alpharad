@@ -2,6 +2,7 @@
 #include "test_settings.h"
 #include "test_image_processing.h"
 #include "test_data_extractors.h"
+#include "test_logger.h"
 #include "test_playground.h"
 
 int main(int argc, char **argv) {
@@ -50,6 +51,11 @@ int main(int argc, char **argv) {
             CU_TEST_INFO_NULL
     };
 
+    CU_TestInfo logger_suite_tests[] = {
+            {"Log level", test_logger_levels},
+            CU_TEST_INFO_NULL
+    };
+
     CU_TestInfo playground_suite_tests[] = {
             {"Int overflow rotation", test_playground_overflow_rotation},
             {"Duct tape bitmap", test_playground_bitmap},
@@ -63,6 +69,7 @@ int main(int argc, char **argv) {
              image_processing_suite_tests},
             {"Data extraction suite", NULL, NULL, data_extractors_test_init, data_extractors_test_teardown,
              data_extraction_suite_tests},
+            {"Logger suite", NULL, NULL, NULL, NULL, logger_suite_tests},
             {"Playground suite", NULL, NULL, NULL, NULL, playground_suite_tests},
             CU_SUITE_INFO_NULL
     };

@@ -1,7 +1,11 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.5...3.18)
+if (${CMAKE_VERSION} VERSION_LESS 3.12)
+    cmake_policy(VERSION ${CMAKE_MAJOR_VERSION}.${CMAKE_MINOR_VERSION})
+endif ()
+
 project(alpharad VERSION 0.5 LANGUAGES C)
 
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 99)
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
@@ -11,5 +15,5 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 add_compile_options("$<$<CONFIG:DEBUG>:-DDEBUG>")
 
-add_compile_definitions(PROJECT_VERSION="${CMAKE_PROJECT_VERSION}")
+add_definitions(-DPROJECT_VERSION="${CMAKE_PROJECT_VERSION}")
 add_subdirectory(src)

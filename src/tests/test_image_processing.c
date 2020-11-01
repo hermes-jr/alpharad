@@ -118,7 +118,7 @@ void test_image_ccl_rr(void) {
     uint p4 = cartesian_to_yuv((coordinate) {2, 3});
     mock_frame[p1] = mock_frame[p2] = mock_frame[p3] = mock_frame[p4] = 0xFF;
 
-    /* Reset counter predictable effects */
+    /* Reset counter for predictable effects */
     rr = 0;
 
     points_detected result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
@@ -172,6 +172,94 @@ void test_image_logging(void) {
 
     settings.file_hits = NULL;
     fclose(mock_out);
+}
+
+void test_image_border_crop(void) {
+    uint *counter_xs = calloc(settings.width, sizeof(counter_xs));
+    uint *counter_ys = calloc(settings.height, sizeof(counter_ys));
+
+    uint rounds = 0;
+    uint flashes_returned = 0;
+
+    const uint border_size = 2;
+    settings.crop = border_size;
+    /* Hit each pixel exactly once. 2 pixels thick border should be ignored */
+    for (uint i = 0; i < screen_buffer_size; i += 2, rounds++) {
+        const uint yuv_coord = i % screen_buffer_size;
+        mock_frame[yuv_coord] = 0xFF;
+        points_detected result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
+        flashes_returned += result.len;
+        if (result.len > 0) {
+            counter_xs[result.arr->x]++;
+            counter_ys[result.arr->y]++;
+        }
+        free(result.arr);
+        mock_frame[yuv_coord] = 0x00;
+    }
+
+    const uint dbs = 2 * border_size;
+
+    /* Only hits within cropped area should be registered, everything else should be equal to 0 */
+    CU_ASSERT_EQUAL(flashes_returned, (settings.width - dbs) * (settings.height - dbs))
+
+    CU_ASSERT_EQUAL(counter_xs[border_size], settings.height - dbs)
+    CU_ASSERT_EQUAL(counter_xs[0], 0)
+    CU_ASSERT_EQUAL(counter_xs[settings.width - 1], 0)
+
+    CU_ASSERT_EQUAL(counter_ys[border_size], settings.width - dbs)
+    CU_ASSERT_EQUAL(counter_ys[0], 0)
+    CU_ASSERT_EQUAL(counter_ys[settings.height - 1], 0)
+
+    free(counter_xs);
+    free(counter_ys);
+    settings.crop = 0;
+}
+
+void test_image_rounding_errors(void) {
+    uint *counter_xs = calloc(settings.width, sizeof(counter_xs));
+    uint *counter_ys = calloc(settings.height, sizeof(counter_ys));
+
+    uint rounds = 0;
+    uint flashes_returned = 0;
+
+    /* Hit each pixel exactly once. All X coordinates should be visited settings.height times and vice versa */
+    for (uint i = 0; i < screen_buffer_size; i += 2, rounds++) {
+        const uint yuv_coord = i % screen_buffer_size;
+        mock_frame[yuv_coord] = 0xFF;
+        points_detected result = get_all_flashes(mock_frame, screen_buffer_size, FULL_SCAN);
+        flashes_returned += result.len;
+        if (result.len > 0) {
+            counter_xs[result.arr->x]++;
+            counter_ys[result.arr->y]++;
+        }
+        free(result.arr);
+        mock_frame[yuv_coord] = 0x00;
+    }
+
+    /* Every hit should've been registered, no extra points expected either */
+    CU_ASSERT_EQUAL(flashes_returned, rounds)
+
+    uint reference = counter_xs[0];
+    CU_ASSERT_EQUAL(reference, settings.height)
+
+    for (uint i = 0; i < settings.width; i++) {
+        if (counter_xs[i] != reference) {
+            CU_FAIL("Flashes were registered incorrectly: X")
+            break;
+        }
+    }
+
+    reference = counter_ys[0];
+    CU_ASSERT_EQUAL(reference, settings.width)
+    for (uint i = 0; i < settings.height; i++) {
+        if (counter_ys[i] != reference) {
+            CU_FAIL("Flashes were registered incorrectly: Y")
+            break;
+        }
+    }
+
+    free(counter_xs);
+    free(counter_ys);
 }
 
 void test_image_ll(void) {

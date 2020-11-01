@@ -113,8 +113,8 @@ points_detected get_all_flashes(const uint8_t *p, uint size, scan_mode mode) {
 
             /* Skip borders (n pixels thick), they behave weirdly in my particular camera */
             uint n_crop = settings.crop;
-            if (n_crop > 0 && (cx <= n_crop - 1 || cy <= n_crop - 1 || cx >= settings.width - n_crop - 1 ||
-                               cy >= settings.height - n_crop - 1)) {
+            if (n_crop > 0 && (cx <= n_crop - 1 || cy <= n_crop - 1 || cx >= settings.width - n_crop ||
+                               cy >= settings.height - n_crop)) {
                 continue;
             }
 

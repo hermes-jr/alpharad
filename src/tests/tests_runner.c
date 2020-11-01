@@ -40,6 +40,8 @@ int main(int argc, char **argv) {
             {"Image processor should detect discrete groups of pixels", test_image_ccl},
             {"Image processor should use round-robin to pick a different representative each time", test_image_ccl_rr},
             {"Detected points should be logged", test_image_logging},
+            {"Check if N-pixels thick border pixels are actually ignored", test_image_border_crop},
+            {"Check for rounding errors in ideal conditions", test_image_rounding_errors},
             {"Duh, linked list, queue, whatever this is. Inventing the wheel", test_image_ll},
             CU_TEST_INFO_NULL
     };

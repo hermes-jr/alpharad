@@ -22,6 +22,10 @@ void test_image_empty(void);
 
 void test_image_logging(void);
 
+void test_image_border_crop(void);
+
+void test_image_rounding_errors(void);
+
 void test_image_ll(void);
 
 uint cartesian_to_yuv(coordinate c);

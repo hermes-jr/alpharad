@@ -5,7 +5,6 @@
  * see http://linuxtv.org/docs.php for more information
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h> /* define CLEAR(x) */
 #include <sys/stat.h>
@@ -113,7 +112,7 @@ void init_mmap(void) {
     if (-1 == xioctl(device, VIDIOC_REQBUFS, &req)) {
         if (EINVAL == errno) {
             log_p(LOG_FATAL, "%s does not support memory mapping. Error %d, %s\n",
-                   settings.dev_name, errno, strerror(errno));
+                  settings.dev_name, errno, strerror(errno));
             exit(EXIT_FAILURE);
         } else {
             errno_exit("VIDIOC_REQBUFS");
@@ -122,7 +121,7 @@ void init_mmap(void) {
 
     if (req.count < 2) {
         log_p(LOG_FATAL, "Insufficient buffer memory on %s\n",
-               settings.dev_name);
+              settings.dev_name);
         exit(EXIT_FAILURE);
     }
 
@@ -130,7 +129,7 @@ void init_mmap(void) {
 
     if (!buffers) {
         log_p(LOG_FATAL, "Out of memory\n",
-               settings.dev_name);
+              settings.dev_name);
         exit(EXIT_FAILURE);
     }
 
@@ -179,7 +178,7 @@ void init_device(void) {
     if (-1 == xioctl(device, VIDIOC_QUERYCAP, &cap)) {
         if (EINVAL == errno) {
             log_p(LOG_FATAL, "%s is no V4L2 device. Error %d, %s\n",
-                   settings.dev_name, errno, strerror(errno));
+                  settings.dev_name, errno, strerror(errno));
             exit(EXIT_FAILURE);
         } else {
             errno_exit("VIDIOC_QUERYCAP");
@@ -188,13 +187,13 @@ void init_device(void) {
 
     if (!(cap.capabilities & V4L2_CAP_VIDEO_CAPTURE)) {
         log_p(LOG_FATAL, "%s is no video capture device\n",
-               settings.dev_name);
+              settings.dev_name);
         exit(EXIT_FAILURE);
     }
 
     if (!(cap.capabilities & V4L2_CAP_STREAMING)) {
         log_p(LOG_FATAL, "%s does not support streaming i/o\n",
-               settings.dev_name);
+              settings.dev_name);
         exit(EXIT_FAILURE);
     }
 
@@ -262,13 +261,13 @@ void open_device(void) {
 
     if (-1 == stat(settings.dev_name, &st)) {
         log_p(LOG_FATAL, "Cannot identify %s. Error %d, %s\n",
-               settings.dev_name, errno, strerror(errno));
+              settings.dev_name, errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
     if (!S_ISCHR(st.st_mode)) {
         log_p(LOG_FATAL, "Bad device %s. Error %d, %s\n",
-               settings.dev_name, errno, strerror(errno));
+              settings.dev_name, errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
 
@@ -276,7 +275,7 @@ void open_device(void) {
 
     if (-1 == device) {
         log_p(LOG_FATAL, "Can't open %s. Error %d, %s\n",
-               settings.dev_name, errno, strerror(errno));
+              settings.dev_name, errno, strerror(errno));
         exit(EXIT_FAILURE);
     }
 }

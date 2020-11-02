@@ -1,5 +1,24 @@
 #!/usr/bin/env python3
 """
+Copyright (C) 2020 Mikhail Antonov <hermes@cyllene.net>
+
+This file is part of alpharad project.
+
+alpharad is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+alpharad is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with alpharad.  If not, see <https://www.gnu.org/licenses/>.
+"""
+
+"""
 Read text file with "X:Y" coordinates in each line.
 Read binary file with random sequence.
 
@@ -7,6 +26,7 @@ Build scatter plots along with distribution of pixel hit frequencies
 for x and y coordinates.
 Build distribution of byte frequencies plot.
 """
+
 import argparse
 
 from matplotlib import patches
@@ -22,10 +42,8 @@ import matplotlib.pyplot as plt
 
 settings = None
 xs, ys, as_bytes = [], [], []
-WIDTH, HEIGHT = 640, 480
-counter = [[0] * HEIGHT] * WIDTH
+width, height = 640, 480
 title = 'alpharad plot'
-colors = ['blue', 'green', 'red', 'cyan', 'magenta', 'yellow']
 
 
 def v_print(param):
@@ -40,12 +58,11 @@ def read_data():
             line = line.strip()
             if not line:
                 continue
-            coords = line.split(':')
-            x = int(coords[0])
+            coordinates = line.split(':')
+            x = int(coordinates[0])
             xs.append(x)
-            y = int(coords[1])
+            y = int(coordinates[1])
             ys.append(y)
-            counter[x][y] += 1
     v_print("Points read: {}".format(len(xs)))
 
     with settings.data as f:
@@ -112,12 +129,12 @@ def plot():
 
     fig.add_subplot(gs01[0, 0])
     plt.title("Xs distribution")
-    plt.hist(xs, bins=WIDTH, snap=False, aa=False)
+    plt.hist(xs, bins=width, snap=False, aa=False)
     plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%6d'))
 
     fig.add_subplot(gs01[1, 0])
     plt.title("Ys distribution")
-    plt.hist(ys, bins=HEIGHT, snap=False, aa=False)
+    plt.hist(ys, bins=height, snap=False, aa=False)
     plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%6d'))
 
     fig.add_subplot(gs01[2, 0])

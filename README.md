@@ -75,7 +75,6 @@ Most of our additional utils are written in Python and you might take either opt
     
     Next, create and activate a clean virtual environment and install all required packages within it  
     ```bash
-    cd qa/
     python3 -m venv env
     source env/bin/activate
     pip install -r requirements.txt
@@ -105,7 +104,7 @@ pkill -SIGUSR1 alpharad
 
 ### Troubleshooting
 #### Camera tuning
-With default camera settings you might get many false positive detections or very low FPS due to unnecessarily long exposure times.
+With default camera settings you might get many false positives or very low FPS due to unnecessarily long exposure times.
 
 These packages might be required:
 ```bash
@@ -129,7 +128,7 @@ ffplay -f v4l2 -framerate 30 -video_size 640x480 -v verbose -i /dev/video0
 ![expected-capture](https://user-images.githubusercontent.com/3757084/98728581-c1564100-23aa-11eb-898b-2aba34b005e3.gif)
 
 #### Some modes are missing
-If you are missing SHA256 modes in `alpharad -M`, it means that the program was built without crypto support. Cmake is configured so that if it fails to detect OpenSSL library, the program would be successfully built without extra features. So make sure the required libraries are available and that `Compiling with OpenSSL crypto support` message appears on building stage.
+If you are missing SHA256 modes in `alpharad -M`, it means that the program was built without crypto support. CMake is configured so that if it fails to detect OpenSSL library, the program would be successfully built without extra features. So make sure the required libraries are available and that `Compiling with OpenSSL crypto support` message appears on building stage.
 
 #### Other bugs
 Please feel free to report any bugs by [opening an issue](https://github.com/hermes-jr/alpharad/issues/new/choose).

@@ -1,0 +1,11 @@
+language: c
+
+before_install:
+  - sudo apt-get -y install cmake libv4l-dev libssl-dev libcunit1-dev
+
+script:
+  - mkdir cmake-build
+  - cd cmake-build/
+  - cmake -DCMAKE_BUILD_TYPE=Debug ..
+  - make
+  - bin/tests_runner

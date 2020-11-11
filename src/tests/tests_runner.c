@@ -108,7 +108,8 @@ int main(int argc, char **argv) {
     // Run
     CU_basic_set_mode(CU_BRM_VERBOSE);
     CU_basic_run_tests();
+    int failed_tests = (int) CU_get_number_of_tests_failed();
 
     CU_cleanup_registry();
-    return CU_get_error();
+    return failed_tests;
 }

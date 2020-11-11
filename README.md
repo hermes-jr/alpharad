@@ -1,3 +1,7 @@
+[![CodeQL](https://github.com/hermes-jr/alpharad/workflows/CodeQL/badge.svg)](https://github.com/hermes-jr/alpharad/actions?query=workflow%3ACodeQL)
+[![Build Status](https://travis-ci.org/hermes-jr/alpharad.svg?branch=master)](https://travis-ci.org/hermes-jr/alpharad)
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
 ### Overview
 Alpharad is a C based open source software aimed at helping hobbyists to conduct experiments on quantum events like alpha particles emission by radioactive Am-241 with DIY hardware (e.g. [1](https://blog.cyllene.net/2011/04/alpha-radiation-camera/), [2](http://www.inventgeek.com/alpha-radiation-visualizer/)).
 
@@ -134,4 +138,4 @@ If you are missing SHA256 modes in `alpharad -M`, it means that the program was 
 Please feel free to report any bugs by [opening an issue](https://github.com/hermes-jr/alpharad/issues/new/choose).
 
 ### License
-Alpharad is [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0.html) licensed
+Alpharad is [GPL-3.0](https://www.gnu.org/licenses/gpl-3.0) licensed

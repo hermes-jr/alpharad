@@ -98,10 +98,14 @@ cmake-build-debug
 cmake-build-release
 cmake-build-debug-coverage
 
-###
+### Garbage
 qa/screenshots/
-/out.dat
-/points.log
+alpharad.cbp
+
+### Byproducts
+/*.dat
+/*.log
 /out.dat.bak
 /points.log.bak
-alpharad.cbp
+/qa/*.png
+/qa/*.mp4

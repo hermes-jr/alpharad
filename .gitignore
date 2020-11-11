@@ -98,6 +98,10 @@ cmake-build-debug
 cmake-build-release
 cmake-build-debug-coverage
 
+### Python virtual environments
+/qa/venv/
+/qa/env/
+
 ### Garbage
 qa/screenshots/
 alpharad.cbp

@@ -210,6 +210,47 @@ def m_parity():
     return result
 
 
+def m_parity_per_frame():
+    """
+    Assuming the chances of each coordinate to be even/odd are equal,
+    derive one bit from each coordinate parity.
+    Let x1p be the parity X coordinate of a flash in previous frame and x2p the same for current frame:
+
+    | x1p| x2p| out
+    | 0 | 0 | skip
+    | 0 | 1 | bit: 1
+    | 1 | 0 | bit: 0
+    | 1 | 1 | skip
+    """
+    result = []
+    pv_x = -1
+    pv_y = -1
+
+    for x, y in points:
+        x_parity = x % 2
+        y_parity = y % 2
+        if pv_x == -1:
+            pv_x = x_parity
+            pv_y = y_parity
+            continue
+
+        # De-skew attempt
+        if pv_x != x_parity:
+            full_byte, byte = byte_acc(pv_x < x_parity)
+            if full_byte:
+                result.append(byte)
+
+        if pv_y != y_parity:
+            full_byte, byte = byte_acc(pv_y < y_parity)
+            if full_byte:
+                result.append(byte)
+
+        pv_x = -1
+        pv_y = -1
+
+    return result
+
+
 def emulate_quantile_function(values, buckets):
     values_count = [0] * buckets
     result = [0.0] * buckets
@@ -328,6 +369,7 @@ if __name__ == "__main__":
         m_quantile_and_compare,
         m_quantile_viktor,
         m_parity,
+        m_parity_per_frame,
         m_deviation,
         m_sha,
     ]

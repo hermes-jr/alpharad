@@ -18,16 +18,15 @@ You should have received a copy of the GNU General Public License
 along with alpharad.  If not, see <https://www.gnu.org/licenses/>.
 """
 
-"""
-Read text file with "X:Y" coordinates in each line.
-Read binary file with random sequence.
-
-Build scatter plots along with distribution of pixel hit frequencies
-for x and y coordinates.
-Build distribution of byte frequencies plot.
-"""
+# Read text file with "X:Y" coordinates in each line.
+# Read binary file with random sequence.
+#
+# Build scatter plots along with distribution of pixel hit frequencies
+# for x and y coordinates.
+# Build distribution of byte frequencies plot.
 
 import argparse
+import os
 
 from matplotlib import patches
 from matplotlib.ticker import FormatStrFormatter
@@ -73,12 +72,14 @@ def read_data():
 
     v_print("Bytes read: {}".format(len(as_bytes)))
 
-    title = "{} flashes {} bytes".format(len(xs), len(as_bytes))
+    title = "{:,} flashes {:,} bytes [{}, {}]".format(
+        len(xs), len(as_bytes), os.path.basename(settings.points.name), os.path.basename(settings.data.name)
+    )
 
 
 def init_arg_parser():
     ap = argparse.ArgumentParser(
-        description='Reads points log file and a binary data associated to it and draws numbers distribution plots')
+        description='Reads points log file and binary data associated with it and draws numbers distribution plots')
     ap.add_argument('-d', '--data', default='../out.dat',
                     type=argparse.FileType('rb'),
                     help='read generated sequence of bytes from DATA')

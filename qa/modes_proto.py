@@ -25,6 +25,8 @@ import numpy as np
 
 points = []
 xqf_sim, yqf_sim = None, None
+buf_byte = 0
+bit_count = 0
 
 width = 640
 height = 480
@@ -36,9 +38,36 @@ def get_data():
             line = line.strip()
             if not line:
                 continue
-            coords = line.split(':')
-            points.append((int(coords[0]), int(coords[1])))
+            coordinates = line.split(':')
+            points.append((int(coordinates[0]), int(coordinates[1])))
     print("Points read: {}".format(len(points)))
+
+
+def reset_bit_buffer():
+    global buf_byte, bit_count
+    buf_byte = 0
+    bit_count = 0
+
+
+def byte_acc(bit):
+    """
+    Accumulate bits and return one byte when full
+
+    :param bit: boolean value of next bit
+    :return: a tuple in form of (result, byte). If result is True, the byte is fully formed and may be used.
+    """
+    global buf_byte, bit_count
+    buf_byte <<= 1
+    if bit:
+        buf_byte |= 1
+    bit_count += 1
+
+    if bit_count == 8:
+        tmp = buf_byte
+        reset_bit_buffer()
+        return True, tmp
+
+    return False, None
 
 
 def m_compare_per_frame():
@@ -47,8 +76,6 @@ def m_compare_per_frame():
     """
     global points
     result = []
-    buf_byte = 0
-    bits = 0
     pv = -1
 
     for x, y in points:
@@ -62,15 +89,9 @@ def m_compare_per_frame():
         if v1 == v2:
             continue
 
-        buf_byte <<= 1
-        if v1 < v2:
-            buf_byte |= 1
-        bits += 1
-
-        if bits == 8:
-            result.append(buf_byte)
-            buf_byte = 0
-            bits = 0
+        full_byte, byte = byte_acc(v1 < v2)
+        if full_byte:
+            result.append(byte)
 
     return result
 
@@ -82,22 +103,14 @@ def m_compare_first_try():
     """
     global points
     result = []
-    buf_byte = 0
-    bits = 0
 
     for x, y in points:
         v1 = (x - 1) / (width - 2)
         v2 = (y - 1) / (height - 2)
 
-        buf_byte <<= 1
-        if v1 < v2:
-            buf_byte |= 1
-        bits += 1
-
-        if bits == 8:
-            result.append(buf_byte)
-            buf_byte = 0
-            bits = 0
+        full_byte, byte = byte_acc(v1 < v2)
+        if full_byte:
+            result.append(byte)
 
     return result
 
@@ -106,7 +119,8 @@ def m_sha():
     """
     When we detect a flash, we feed the whole frame state to sha256 function. Thus, we guarantee that at least
     one pixel at truly random position is lit, which in turn means that the whole hash is unpredictable.
-    Thermal noise of other dark pixels adds entropy.
+    Thermal noise of other dark pixels adds entropy. Thermal noise emulation was removed from this code because
+    it makes no difference but slows things down a lot.
 
     :return: 32 bytes per frame that contains at least one flash
     (for the purposes of this script it is safe to assume that each frame contains only a single flash)
@@ -120,8 +134,7 @@ def m_sha():
     for i in range(min(len(points), 1_000_000 // hash_len)):
         x, y = points[i]
 
-        # Dark noisy pixels (thermal noise emulation)
-        frame = np.random.randint(-128, -90, width * height * 2, np.dtype('b'))
+        frame = np.zeros(width * height * 2, np.dtype('b'))
 
         # Flash
         frame[(y * width + x) * 2] = np.random.randint(120, 127)
@@ -132,55 +145,68 @@ def m_sha():
     return result
 
 
-def m_box_muller():
+def m_deviation():
     """
-    An attempt to do a probability integral transform / Box-Muller
-    This is a playground. I hope no one ever sees this :)
-    cuz I'm ashamed for not understanding this
+    Our coordinates are distributed somewhat normally, check deviation from mean and if it's positive,
+    spawn bit 1, otherwise spawn 0 (or the other way around, it doesn't matter)
     """
-    x_orig_acc = []
-    y_orig_acc = []
     result = []
+    cumulative_ma_x = 0
+    cumulative_ma_y = 0
+    average_window = 800
+
     for x, y in points:
-        # for x, y in np.random.normal(0.5, 0.35, size=(2_000_000, 2)):
-        # if x < 0 or x > 1 or y < 0 or y > 1:
-        #   continue
-        # x_orig = x
-        # y_orig = y
+        # Update moving average
+        cumulative_ma_x = cumulative_ma_x + x - cumulative_ma_x / average_window
+        cumulative_ma_y = cumulative_ma_y + y - cumulative_ma_y / average_window
 
-        x_orig = x / (width - 1)
-        y_orig = y / (height - 1)
-        x_orig_acc.append(x_orig)
-        y_orig_acc.append(y_orig)
-        x_orig_as_byte = int(x_orig * 256)
-        y_orig_as_byte = int(y_orig * 256)
-        if len(x_orig_acc) < 250:
+        moving_average_x = cumulative_ma_x / average_window
+        good_range_x = min(width - moving_average_x, moving_average_x - 0)
+
+        moving_average_y = cumulative_ma_y / average_window
+        good_range_y = min(height - moving_average_y, moving_average_y - 0)
+
+        # Check current value deviation against the average.
+        # If one side of the truncated bell is larger then the other, ignore the excess
+        if x != moving_average_x and moving_average_x + good_range_x > x > moving_average_x - good_range_x:
+            full_byte, byte = byte_acc(x < moving_average_x)
+            if full_byte:
+                result.append(byte)
+
+        if y != moving_average_y and moving_average_y + good_range_y > y > moving_average_y - good_range_y:
+            full_byte, byte = byte_acc(y < moving_average_y)
+            if full_byte:
+                result.append(byte)
+
+    return result
+
+
+def m_parity():
+    """
+    Assuming the chances of each coordinate to be even/odd are equal,
+    derive one bit from coordinates parity.
+    Let xp, yp be the parity of X and Y coordinates of a flash:
+
+    | xp| yp| out
+    | 0 | 0 | skip
+    | 0 | 1 | bit: 1
+    | 1 | 0 | bit: 0
+    | 1 | 1 | skip
+    """
+    result = []
+
+    for x, y in points:
+        x_parity = x % 2
+        y_parity = y % 2
+
+        # De-skew attempt
+        if x_parity == y_parity:
             continue
-        else:
-            # nobs, mm, mean, variance, sk, kt = stats.describe(x_orig)
-            # x_mu = mean
-            # x_theta = np.sqrt(variance)
-            # nobs, mm, mean, variance, sk, kt = stats.describe(x_orig)
-            # y_mu = mean
-            # y_theta = np.sqrt(variance)
 
-            # y_orig = y_orig / y_theta - y_mu
-            # x_orig = x_orig / x_theta - x_mu
+        full_byte, byte = byte_acc(x_parity < y_parity)
+        if full_byte:
+            result.append(byte)
 
-            z1 = np.sqrt(-2 * np.log(x_orig)) * np.cos(2 * np.pi * y_orig)
-            z2 = np.sqrt(-2 * np.log(x_orig)) * np.sin(2 * np.pi * y_orig)
-            # z1 = x_orig
-            # z2 = y_orig
-            x_conv = np.exp((-1 / 2) * (z1 ** 2 + z2 ** 2))
-            y_conv = (1 / np.pi) * np.arccos(z1 / np.sqrt(z1 ** 2 + z2 ** 2))
-            x_conv_as_byte = int(x_conv * 256)
-            y_conv_as_byte = int(y_conv * 256)
-            # print('X: {} ({}) -> {} ({}) | Y: {} ({}) -> {} ({})'.format(x_orig, x_orig_as_byte,
-            #                                                              x_conv, x_conv_as_byte,
-            #                                                              y_orig, y_orig_as_byte,
-            #                                                              y_conv, y_conv_as_byte))
-            result.append(x_conv_as_byte)
-            result.append(y_conv_as_byte)
     return result
 
 
@@ -271,21 +297,13 @@ def m_quantile_and_compare():
     :return: 1 byte every 8 flashes
     """
     result = []
-    buf_byte = 0
-    bits = 0
     for x, y in points:
         x_chance = xqf_sim[x]
         y_chance = yqf_sim[y]
 
-        buf_byte <<= 1
-        if x_chance < y_chance:
-            buf_byte |= 1
-        bits += 1
-
-        if bits == 8:
-            result.append(buf_byte)
-            buf_byte = 0
-            bits = 0
+        full_byte, byte = byte_acc(x_chance < y_chance)
+        if full_byte:
+            result.append(byte)
 
     return result
 
@@ -309,9 +327,11 @@ if __name__ == "__main__":
         m_quantile,
         m_quantile_and_compare,
         m_quantile_viktor,
-        # m_box_muller,
+        m_parity,
+        m_deviation,
         m_sha,
     ]
     for v in methods:
         print("Calculating", v.__name__)
+        reset_bit_buffer()  # Get rid of leftovers from previous method
         save_result(v.__name__, v)

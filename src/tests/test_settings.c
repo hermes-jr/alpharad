@@ -127,6 +127,13 @@ void test_settings_population_crop(void) {
     CU_ASSERT_EQUAL(settings.crop, 7u)
 }
 
+void test_settings_population_threshold(void) {
+    CU_ASSERT_EQUAL(settings.threshold, S_DEFAULT_THRESHOLD)
+    char **argv = (char *[]) {"prog", "--threshold=42"};
+    populate_settings(stdout, argv, 2);
+    CU_ASSERT_EQUAL(settings.threshold, 42u)
+}
+
 void test_settings_population_help(void) {
     const size_t limit = 1024;
     char mock_buf[limit];
@@ -176,7 +183,7 @@ void test_settings_population_mode_unrecognized(void) {
     char mock_buf[limit];
     FILE *mock_out = fmemopen(mock_buf, limit, "w+");
 
-    char **argv_h = (char *[]) {"prog", "-m", "shit"};
+    char **argv_h = (char *[]) {"prog", "-m", "garbage"};
     int settings_ret = populate_settings(mock_out, argv_h, 3);
     fflush(mock_out);
 

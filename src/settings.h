@@ -52,7 +52,7 @@ frame_processor_t *registered_processors;
 #define S_DEFAULT_WIDTH 640
 #define S_DEFAULT_HEIGHT 480
 #define S_DEFAULT_CROP 0
-#define S_DEFAULT_THRESHOLD 8u
+#define S_DEFAULT_THRESHOLD 16u
 #define S_DEFAULT_VERBOSE LOG_FATAL
 
 struct settings {
@@ -76,6 +76,8 @@ void print_usage(FILE *ofp, char *self_name);
 void print_supported_modes(FILE *ofp);
 
 int validated_long_parse(FILE *ofp, uint *target, char *input, const char *err_msg);
+
+int validated_short_parse(FILE *ofp, uint8_t *target, char *input, const char *err_msg);
 
 bool is_processor_null(frame_processor_t *p);
 

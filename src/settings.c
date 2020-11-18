@@ -42,6 +42,7 @@ static const struct option
         {"device",     required_argument, NULL, 'd'},
         {"geometry",   required_argument, NULL, 'g'},
         {"border",     optional_argument, NULL, 'b'},
+        {"threshold",  optional_argument, NULL, 't'},
         {"hits-file",  required_argument, NULL, 'l'},
         {"out-file",   required_argument, NULL, 'o'},
         {"mode",       required_argument, NULL, 'm'},
@@ -50,7 +51,7 @@ static const struct option
         {"help",       no_argument,       NULL, 'h'},
         {0, 0, 0,                               0}
 };
-static const char short_options[] = "d:g:b:l:o:m:Mv:h";
+static const char short_options[] = "d:g:b:t:l:o:m:Mv:h";
 
 void print_usage(FILE *ofp, char *self_name) {
     fprintf(ofp,
@@ -60,6 +61,7 @@ void print_usage(FILE *ofp, char *self_name) {
             "-d, --device=PATH             Video device PATH [%s]\n"
             "-g, --geometry=WIDTH:HEIGHT   Frame dimensions [%d:%d]\n"
             "-b, --border=N                Ignore everything that happens within N pixels thick border\n"
+            "-t, --threshold=N             Ignore pixels with luminosity below N [%d]\n"
             "-l, --hits-file=LOGFILE       Log detected flashes to LOGFILE. Disabled by default\n"
             "-o, --out-file=FILE           Write processed data to FILE [%s] \n"
             "-m, --mode=MODE               Set one of available modes\n"
@@ -67,7 +69,8 @@ void print_usage(FILE *ofp, char *self_name) {
             "-v, --verbose=LEVEL           Set verbosity level\n"
             "-h, --help                    Print this message\n"
             "",
-            self_name, PROJECT_VERSION, settings.dev_name, settings.width, settings.height, settings.file_out_name);
+            self_name, PROJECT_VERSION, settings.dev_name, settings.width, settings.height, settings.threshold,
+            settings.file_out_name);
 }
 
 void print_supported_modes(FILE *ofp) {
@@ -104,7 +107,7 @@ int populate_settings(FILE *ofp, char **argv, int argc) {
             break;
         }
 
-        // d:g:b:l:o:m:Mv:h
+        // d:g:b:t:l:o:m:Mv:h
         switch (c) {
             case 0: /* getopt_long() flag */
                 break;
@@ -145,6 +148,14 @@ int populate_settings(FILE *ofp, char **argv, int argc) {
                 break;
             }
 
+            case 't': {
+                if (validated_short_parse(ofp, &(settings.threshold), optarg, "Couldn't parse option 't'")) {
+                    return -1;
+                }
+                log_fp(LOG_DEBUG, ofp, "Threshold: %d\n", settings.threshold);
+                break;
+            }
+
             case 'l':
                 settings.file_hits_name = optarg;
                 log_fp(LOG_DEBUG, ofp, "Hits file: %s\n", settings.file_hits_name);
@@ -178,9 +189,8 @@ int populate_settings(FILE *ofp, char **argv, int argc) {
                 return 1;
 
             case 'v':
-                settings.verbose = strtol(optarg, NULL, 0);
-                if (errno) {
-                    fprintf(ofp, "Couldn't parse option 'v' %s", optarg);
+                if (validated_short_parse(ofp, &(settings.verbose), optarg, "Couldn't parse option 'v'")) {
+                    return -1;
                 }
                 log_fp(LOG_DEBUG, ofp, "Verbosity: %d\n", settings.verbose);
                 break;
@@ -203,11 +213,25 @@ int populate_settings(FILE *ofp, char **argv, int argc) {
 int validated_long_parse(FILE *ofp, uint *target, char *input, const char *err_msg) {
     char *verify_end = NULL;
     if (input != NULL) {
-        *target = strtol(input, &verify_end, 0);
+        *target = strtoul(input, &verify_end, 0);
     }
     if (input == NULL || (errno && *target == 0) || verify_end == input) {
         log_fp(LOG_FATAL, ofp, "%s\n", err_msg);
         return -1;
     }
+    return 0;
+}
+
+/* Attempt to parse value and report in case of error */
+int validated_short_parse(FILE *ofp, uint8_t *target, char *input, const char *err_msg) {
+    uint tmp = 0u;
+    if (validated_long_parse(ofp, &tmp, input, err_msg)) {
+        return -1;
+    }
+    if (tmp > UINT8_MAX) {
+        log_fp(LOG_FATAL, ofp, "%s\n", err_msg);
+        return -1;
+    }
+    *target = tmp;
     return 0;
 }

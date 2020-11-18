@@ -118,10 +118,10 @@ sudo apt install v4l-utils ffmpeg
 Webcam tuning
 ```bash
 v4l2-ctl --set-ctrl=exposure_auto=1
-v4l2-ctl --set-ctrl=exposure_absolute=255
+v4l2-ctl --set-ctrl=exposure_absolute=295
 v4l2-ctl --set-ctrl=exposure_auto_priority=0
 v4l2-ctl --set-ctrl=sharpness=255
-v4l2-ctl --set-ctrl=contrast=255
+v4l2-ctl --set-ctrl=contrast=200
 ```
 
 Check if everything works

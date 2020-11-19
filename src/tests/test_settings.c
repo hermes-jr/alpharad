@@ -58,9 +58,8 @@ void test_settings_population_dimensions(void) {
 }
 
 void test_settings_incorrect_width(void) {
-    const size_t limit = 1024;
-    char mock_buf[limit];
-    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+    char mock_buf[BUFSIZ];
+    FILE *mock_out = fmemopen(mock_buf, BUFSIZ, "w+");
 
     char **argv_w = (char *[]) {"prog", "--geometry=FOOBAR:-1"};
     int settings_ret = populate_settings(mock_out, argv_w, 2);
@@ -74,9 +73,8 @@ void test_settings_incorrect_width(void) {
 }
 
 void test_settings_incorrect_height(void) {
-    const size_t limit = 1024;
-    char mock_buf[limit];
-    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+    char mock_buf[BUFSIZ];
+    FILE *mock_out = fmemopen(mock_buf, BUFSIZ, "w+");
 
     char **argv_h = (char *[]) {"prog", "--geometry=640:FOOBAR"};
     int settings_ret = populate_settings(mock_out, argv_h, 2);
@@ -135,9 +133,8 @@ void test_settings_population_threshold(void) {
 }
 
 void test_settings_population_help(void) {
-    const size_t limit = 1024;
-    char mock_buf[limit];
-    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+    char mock_buf[BUFSIZ];
+    FILE *mock_out = fmemopen(mock_buf, BUFSIZ, "w+");
 
     char **argv_h = (char *[]) {"prog", "-h"};
     int settings_ret = populate_settings(mock_out, argv_h, 2);
@@ -151,9 +148,8 @@ void test_settings_population_help(void) {
 }
 
 void test_settings_unrecognized_option(void) {
-    const size_t limit = 1024;
-    char mock_buf[limit];
-    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+    char mock_buf[BUFSIZ];
+    FILE *mock_out = fmemopen(mock_buf, BUFSIZ, "w+");
 
     /* Passing unknown option should lead to help message being printed and failure exit code */
     char **argv_h = (char *[]) {"prog", "--this-should-be-an-unsupported-parameter-name"};
@@ -179,9 +175,8 @@ void test_settings_population_mode(void) {
 }
 
 void test_settings_population_mode_unrecognized(void) {
-    const size_t limit = 1024;
-    char mock_buf[limit];
-    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+    char mock_buf[BUFSIZ];
+    FILE *mock_out = fmemopen(mock_buf, BUFSIZ, "w+");
 
     char **argv_h = (char *[]) {"prog", "-m", "garbage"};
     int settings_ret = populate_settings(mock_out, argv_h, 3);
@@ -194,9 +189,8 @@ void test_settings_population_mode_unrecognized(void) {
 }
 
 void test_settings_population_print_modes(void) {
-    const size_t limit = 1024;
-    char mock_buf[limit];
-    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+    char mock_buf[BUFSIZ];
+    FILE *mock_out = fmemopen(mock_buf, BUFSIZ, "w+");
 
     char **argv_h = (char *[]) {"prog", "-M"};
     int settings_ret = populate_settings(mock_out, argv_h, 2);

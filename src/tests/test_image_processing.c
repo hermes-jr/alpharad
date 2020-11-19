@@ -175,9 +175,8 @@ void test_image_ccl_rr(void) {
 }
 
 void test_image_logging(void) {
-    const size_t limit = 1024;
-    char mock_buf[limit];
-    FILE *mock_out = fmemopen(mock_buf, limit, "w+");
+    char mock_buf[BUFSIZ];
+    FILE *mock_out = fmemopen(mock_buf, BUFSIZ, "w+");
     settings.file_hits = mock_out;
 
     mock_frame[coord1] = 0xFF; // 1:1 should be logged

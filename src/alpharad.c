@@ -17,7 +17,6 @@ You should have received a copy of the GNU General Public License
 along with alpharad.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>

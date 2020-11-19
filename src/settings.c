@@ -117,12 +117,11 @@ int populate_settings(FILE *ofp, char **argv, int argc) {
                 break;
 
             case 'g': {
-                int buffer_size = 31;
-                char provided_mode[buffer_size + 1];
+                char provided_mode[BUFSIZ];
                 char *mode_token;
 
-                strncpy(provided_mode, optarg, buffer_size);
-                provided_mode[buffer_size] = '\0';
+                strncpy(provided_mode, optarg, BUFSIZ - 1);
+                provided_mode[BUFSIZ - 1] = '\0';
 
                 char *delimiter = ":";
                 /* Get width */

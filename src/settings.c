@@ -64,16 +64,16 @@ void print_usage(FILE *ofp, char *self_name) {
             "-g, --geometry=WIDTH:HEIGHT   Frame dimensions [%d:%d]\n"
             "-b, --border=N                Ignore everything that happens within N pixels thick border\n"
             "-t, --threshold=N             Ignore pixels with luminosity below N [%d]\n"
-            "-l, --hits-file=LOGFILE       Log detected flashes to LOGFILE. Disabled by default\n"
+            "-l, --hits-file=LOGFILE       Log detected flashes to LOGFILE [%s]\n"
             "-o, --out-file=FILE           Write processed data to FILE [%s] \n"
             "-m, --mode=MODE               Set one of available modes\n"
             "-M, --list-modes              List currently supported modes\n"
             "-y, --yes-to-all              Modify existing output files\n"
-            "-v, --verbose=LEVEL           Set verbosity level\n"
+            "-v, --verbose=LEVEL           Set verbosity level (%d-%d)\n"
             "-h, --help                    Print this message\n"
             "",
             self_name, PROJECT_VERSION, settings.dev_name, settings.width, settings.height, settings.threshold,
-            settings.file_out_name);
+            settings.file_hits_name, settings.file_out_name, LOG_FATAL, LOG_TRACE);
 }
 
 void print_supported_modes(FILE *ofp) {

@@ -34,7 +34,8 @@ struct settings settings = {
         .height = S_DEFAULT_HEIGHT,
         .crop = S_DEFAULT_CROP,
         .threshold = S_DEFAULT_THRESHOLD,
-        .verbose = S_DEFAULT_VERBOSE
+        .verbose = S_DEFAULT_VERBOSE,
+        .yes_to_all = S_DEFAULT_YES_TO_ALL
 };
 
 static const struct option
@@ -47,11 +48,12 @@ static const struct option
         {"out-file",   required_argument, NULL, 'o'},
         {"mode",       required_argument, NULL, 'm'},
         {"list-modes", no_argument,       NULL, 'M'},
+        {"yes",        no_argument,       NULL, 'y'},
         {"verbose",    optional_argument, NULL, 'v'},
         {"help",       no_argument,       NULL, 'h'},
         {0, 0, 0,                               0}
 };
-static const char short_options[] = "d:g:b:t:l:o:m:Mv:h";
+static const char short_options[] = "d:g:b:t:l:o:m:Myv:h";
 
 void print_usage(FILE *ofp, char *self_name) {
     fprintf(ofp,
@@ -66,6 +68,7 @@ void print_usage(FILE *ofp, char *self_name) {
             "-o, --out-file=FILE           Write processed data to FILE [%s] \n"
             "-m, --mode=MODE               Set one of available modes\n"
             "-M, --list-modes              List currently supported modes\n"
+            "-y, --yes-to-all              Modify existing output files\n"
             "-v, --verbose=LEVEL           Set verbosity level\n"
             "-h, --help                    Print this message\n"
             "",
@@ -186,6 +189,11 @@ int populate_settings(FILE *ofp, char **argv, int argc) {
             case 'M':
                 print_supported_modes(ofp);
                 return 1;
+
+            case 'y':
+                settings.yes_to_all = true;
+                log_fp(LOG_DEBUG, ofp, "Permission granted to modify existing output files\n");
+                break;
 
             case 'v':
                 if (validated_short_parse(ofp, &(settings.verbose), optarg, "Couldn't parse option 'v'")) {

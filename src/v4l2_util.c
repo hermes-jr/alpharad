@@ -250,8 +250,9 @@ void init_device(void) {
 }
 
 void close_device(void) {
-    if (-1 == close(device))
+    if (-1 != device && -1 == close(device)) {
         errno_exit("close");
+    }
 
     device = -1;
 }

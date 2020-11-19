@@ -54,6 +54,7 @@ frame_processor_t *registered_processors;
 #define S_DEFAULT_CROP 0
 #define S_DEFAULT_THRESHOLD 16u
 #define S_DEFAULT_VERBOSE LOG_FATAL
+#define S_DEFAULT_YES_TO_ALL false
 
 struct settings {
     uint width;
@@ -61,6 +62,7 @@ struct settings {
     uint crop;
     uint8_t threshold;
     uint8_t verbose;
+    bool yes_to_all;
     frame_processor_t frame_processor;
     char *dev_name;
     char *file_hits_name;

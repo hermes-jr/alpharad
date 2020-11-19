@@ -44,6 +44,7 @@ int main(int argc, char **argv) {
             {"Verbosity level should be set", test_settings_population_verbose},
             {"Border cropping should be set", test_settings_population_crop},
             {"Threshold should be set", test_settings_population_threshold},
+            {"Force modification option should be set", test_settings_population_yes_to_all},
             {"Mode should be set", test_settings_population_mode},
             {"Incorrect mode should be reported", test_settings_population_mode_unrecognized},
             {"Mode list should be printed", test_settings_population_print_modes},

@@ -44,6 +44,8 @@ void test_settings_population_crop(void);
 
 void test_settings_population_threshold(void);
 
+void test_settings_population_yes_to_all(void);
+
 void test_settings_population_help(void);
 
 void test_settings_unrecognized_option(void);

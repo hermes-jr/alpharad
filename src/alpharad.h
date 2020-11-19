@@ -25,6 +25,8 @@ along with alpharad.  If not, see <https://www.gnu.org/licenses/>.
 
 void process_image(const uint8_t *p, uint size);
 
+bool check_file(char *filename);
+
 float fps_rolling_average(void);
 
 #endif //ALPHARAD_ALPHARAD_H

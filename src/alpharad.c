@@ -143,6 +143,43 @@ static void pre_exit_cleanup(void) {
     free(fps_buffer);
 }
 
+/**
+ * Check for file availability. If it exists, ask user's permission to alter existing file.
+ * This approach is naive and is vulnerable to race condition, but that'll do.
+ *
+ * @param filename
+ * @return true if file does not exist or user is ready to overwrite it
+ */
+bool check_file(char *filename) {
+    if (settings.yes_to_all) {
+        return true;
+    }
+
+    bool ready_to_write = false;
+
+    FILE *check_me = fopen(filename, "r");
+    if (check_me == NULL) {
+        return true;
+    } else {
+        fclose(check_me);
+    }
+
+    fprintf(stderr, "File %s already exists. Proceed with writing to it? [y/N] ", filename);
+    fflush(stderr);
+
+    int c = getchar();
+    if (c == 'y' || c == 'Y') {
+        ready_to_write = true;
+    } else {
+        log_p(LOG_FATAL, "Not appending to existing file - exiting\n");
+    }
+    // Ignore remaining buffered data
+    while (c != EOF && c != '\n') {
+        c = getchar();
+    }
+    return ready_to_write;
+}
+
 int main(int argc, char **argv) {
     /* Get rid of unused warning */
     (void) argv;
@@ -171,7 +208,16 @@ int main(int argc, char **argv) {
     signal(SIGUSR1, signal_usr1_handler);
     signal(SIGINT, signal_sigint_handler);
 
+    if (!check_file(settings.file_out_name)) {
+        pre_exit_cleanup();
+        return EXIT_FAILURE;
+    }
     settings.file_out = fopen(settings.file_out_name, "ab");
+
+    if (!check_file(settings.file_hits_name)) {
+        pre_exit_cleanup();
+        return EXIT_FAILURE;
+    }
     settings.file_hits = fopen(settings.file_hits_name, "a");
 
     log_p(LOG_INFO, "Opening video device\n");

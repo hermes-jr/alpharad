@@ -132,6 +132,13 @@ void test_settings_population_threshold(void) {
     CU_ASSERT_EQUAL(settings.threshold, 42u)
 }
 
+void test_settings_population_yes_to_all(void) {
+    CU_ASSERT_FALSE(settings.yes_to_all)
+    char **argv = (char *[]) {"prog", "-y"};
+    populate_settings(stdout, argv, 2);
+    CU_ASSERT_TRUE(settings.yes_to_all)
+}
+
 void test_settings_population_help(void) {
     char mock_buf[BUFSIZ];
     FILE *mock_out = fmemopen(mock_buf, BUFSIZ, "w+");

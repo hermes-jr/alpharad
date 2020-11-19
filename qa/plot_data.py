@@ -26,9 +26,10 @@ along with alpharad.  If not, see <https://www.gnu.org/licenses/>.
 # Build distribution of byte frequencies plot.
 
 import argparse
-import os
+import math
 
 from matplotlib import patches
+from matplotlib import rcParams
 from matplotlib.ticker import FormatStrFormatter
 
 try:
@@ -39,11 +40,14 @@ except ImportError:
 
 import matplotlib.pyplot as plt
 
+rcParams['font.family'] = 'monospace'
+
 settings = None
 xs, ys, as_bytes = [], [], []
 width, height = 640, 480
 x_count = {}
 y_count = {}
+ent = 0.0
 title = 'alpharad plot'
 
 
@@ -76,9 +80,7 @@ def read_data():
 
     v_print('Bytes read: {}'.format(len(as_bytes)))
 
-    title = '{:,} flashes {:,} bytes [{}, {}]'.format(
-        len(xs), len(as_bytes), os.path.basename(settings.points.name), os.path.basename(settings.data.name)
-    )
+    title = '{:,} flashes {:,} bytes'.format(len(xs), len(as_bytes))
 
 
 def init_arg_parser():
@@ -101,6 +103,22 @@ def init_arg_parser():
     ap.add_argument('-v', '--verbose', action='store_true',
                     help='explain what is being done')
     return ap
+
+
+def calc_entropy(values):
+    if len(values) == 0:
+        return
+
+    global ent
+    values_count = [0] * 256
+    for pt in values:
+        values_count[pt] += 1
+
+    for k, v in enumerate(values_count):
+        prob = v / len(values)
+        if prob != 0:
+            ent += prob * math.log2(prob)
+    ent *= -1
 
 
 def plot():
@@ -145,7 +163,10 @@ def plot():
     plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%6d'))
 
     fig.add_subplot(gs01[2, 0])
-    plt.title('Bytes distribution')
+    bytes_title = 'Bytes distribution'
+    if settings.stats:
+        bytes_title += r' $(\mathcal{H} = $' + '{:.15f})'.format(ent)
+    plt.title(bytes_title)
     plt.hist(as_bytes, bins=256, snap=False, aa=False)
     plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%6d'))
 
@@ -198,5 +219,7 @@ if __name__ == '__main__':
                 stats.describe(ys)))
             print('byte stats: {}'.format(stats.describe(as_bytes)))
         print_frequencies()
+        calc_entropy(as_bytes)
+        print('Entropy: {:.15f}'.format(ent))
 
     plot()

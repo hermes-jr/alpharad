@@ -48,6 +48,7 @@ width, height = 640, 480
 x_count = {}
 y_count = {}
 ent = 0.0
+diversity = 0.0
 title = 'alpharad plot'
 
 
@@ -105,20 +106,25 @@ def init_arg_parser():
     return ap
 
 
-def calc_entropy(values):
+def calc_entropy_and_diversity(values):
     if len(values) == 0:
         return
 
     global ent
+    global diversity
+
     values_count = [0] * 256
+    ideal_p = 1.0 / 256
     for pt in values:
         values_count[pt] += 1
 
     for k, v in enumerate(values_count):
         prob = v / len(values)
+        diversity += math.fabs(prob - ideal_p)
         if prob != 0:
             ent += prob * math.log2(prob)
     ent *= -1
+    diversity /= 2.0
 
 
 def plot():
@@ -163,10 +169,16 @@ def plot():
     plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%6d'))
 
     fig.add_subplot(gs01[2, 0])
-    bytes_title = 'Bytes distribution'
     if settings.stats:
-        bytes_title += r' $(\mathcal{H} = $' + '{:.15f})'.format(ent)
-    plt.title(bytes_title)
+        invisible_rect = patches.Rectangle((0, 0), 1, 1, facecolor='w', alpha=0.0)
+        rcParams['legend.handlelength'] = 0
+        rcParams['legend.handletextpad'] = 0
+        plt.gca().legend(
+            [invisible_rect, invisible_rect],
+            [r' $\mathcal{H} = $' + '{:.10f}'.format(ent), r' $\mathcal{D} = $' + '{:.10f}'.format(diversity)],
+            loc='lower left'
+        )
+    plt.title('Bytes distribution')
     plt.hist(as_bytes, bins=256, snap=False, aa=False)
     plt.gca().yaxis.set_major_formatter(FormatStrFormatter('%6d'))
 
@@ -219,7 +231,8 @@ if __name__ == '__main__':
                 stats.describe(ys)))
             print('byte stats: {}'.format(stats.describe(as_bytes)))
         print_frequencies()
-        calc_entropy(as_bytes)
+        calc_entropy_and_diversity(as_bytes)
         print('Entropy: {:.15f}'.format(ent))
+        print('Diversity index: {:.15f}'.format(diversity))
 
     plot()

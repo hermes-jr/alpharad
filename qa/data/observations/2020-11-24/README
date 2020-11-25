@@ -1,0 +1,24 @@
+2026295 points
+
+All of these are artificially generated, they don't represent actual data. Used for method testing and comparison as edge cases
+
+synth_ideal.log - truncated normal distribution, no hot pixels, no other anomalies
+
+synth_bad_dot.log - as if a single pixel would be generated millions of times more often than others
+
+synth_bad_line.log - one vertical line of pixels is way more active than the other lines
+
+Can be recreated with the following script for perfect case and trivial modifications to introduce artifacts:
+
+```
+import scipy.stats as stats
+
+npoints = 2026295
+lower, upper_x, upper_y = 0, 640, 480
+mu_x, mu_y, sigma = 360, 220, 440
+
+for _ in range(npoints):
+    x = stats.truncnorm.rvs((lower - mu_x) / sigma, (upper_x - mu_x) / sigma, loc=mu_x, scale=sigma)
+    y = stats.truncnorm.rvs((lower - mu_y) / sigma, (upper_y - mu_y) / sigma, loc=mu_y, scale=sigma)
+    print('{}:{}'.format(int(x), int(y)))
+```

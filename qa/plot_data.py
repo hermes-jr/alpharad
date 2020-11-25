@@ -48,7 +48,7 @@ width, height = 640, 480
 x_count = {}
 y_count = {}
 ent = 0.0
-diversity = 0.0
+uniformity = 0.0
 title = 'alpharad plot'
 
 
@@ -106,12 +106,12 @@ def init_arg_parser():
     return ap
 
 
-def calc_entropy_and_diversity(values):
+def calc_entropy_and_uniformity(values):
     if len(values) == 0:
         return
 
     global ent
-    global diversity
+    global uniformity
 
     values_count = [0] * 256
     ideal_p = 1.0 / 256
@@ -120,11 +120,11 @@ def calc_entropy_and_diversity(values):
 
     for k, v in enumerate(values_count):
         prob = v / len(values)
-        diversity += math.fabs(prob - ideal_p)
+        uniformity += math.fabs(prob - ideal_p)
         if prob != 0:
             ent += prob * math.log2(prob)
     ent *= -1
-    diversity /= 2.0
+    uniformity = 1 - uniformity / 2.0
 
 
 def plot():
@@ -175,7 +175,7 @@ def plot():
         rcParams['legend.handletextpad'] = 0
         plt.gca().legend(
             [invisible_rect, invisible_rect],
-            [r' $\mathcal{H} = $' + '{:.10f}'.format(ent), r' $\mathcal{D} = $' + '{:.10f}'.format(diversity)],
+            [r' $\mathcal{H} = $' + '{:.10f}'.format(ent), r' $\mathcal{U} = $' + '{:.10f}'.format(uniformity)],
             loc='lower left'
         )
     plt.title('Bytes distribution')
@@ -231,8 +231,8 @@ if __name__ == '__main__':
                 stats.describe(ys)))
             print('byte stats: {}'.format(stats.describe(as_bytes)))
         print_frequencies()
-        calc_entropy_and_diversity(as_bytes)
+        calc_entropy_and_uniformity(as_bytes)
         print('Entropy: {:.15f}'.format(ent))
-        print('Diversity index: {:.15f}'.format(diversity))
+        print('Uniformity index: {:.15f}'.format(uniformity))
 
     plot()

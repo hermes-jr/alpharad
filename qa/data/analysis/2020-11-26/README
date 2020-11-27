@@ -1,0 +1,28 @@
+Enough points to generate 1 million bytes in any mode
+Synthetic data sets generated with the following code
+
+```
+import scipy.stats as stats
+
+# Adjust these:
+numpoints = 1_000_000 * 20
+anomaly = 1  # 0 - none, 1 - dot, 2 - line
+anomaly_chance_percent = 1000 / (640 * 480)  # anomaly pixel lights up 1000 times as often as others
+lower, upper_x, upper_y = 0, 640, 480
+mu_x, mu_y, sigma = 360, 220, 440
+
+for p in range(numpoints):
+    anomaly_chance = (p % 100) <= anomaly_chance_percent
+
+    if anomaly > 0 and anomaly_chance:
+        x = 146
+    else:
+        x = stats.truncnorm.rvs((lower - mu_x) / sigma, (upper_x - mu_x) / sigma, loc=mu_x, scale=sigma)
+
+    if anomaly == 1 and anomaly_chance:
+        y = 20
+    else:
+        y = stats.truncnorm.rvs((lower - mu_y) / sigma, (upper_y - mu_y) / sigma, loc=mu_y, scale=sigma)
+    print('{}:{}'.format(int(x), int(y)))
+
+```

@@ -46,13 +46,13 @@ def grouped_horizontal_bar_plot(df, title, x_axis_major_locator, file_name):
     formatter.set_scientific(False)
     ax.xaxis.set_major_formatter(formatter)
     ax.xaxis.set_major_locator(x_axis_major_locator)
+    plt.setp(ax.get_xminorticklabels(), visible=False)
     plt.grid(b=True, which='major', axis='x', zorder=0.0, alpha=0.3)
 
     # for p in ax.patches:
     #     ax.annotate(str(p.get_width()), (p.get_x() + p.get_width(), p.get_y()), xytext=(0.05, 1.30),
     #                 textcoords='offset points', horizontalalignment='left')
 
-    # ax.legend(bbox_to_anchor=(0.5, 1.09), ncol=3, loc='upper center')
     handles, labels = ax.get_legend_handles_labels()
     ax.legend(handles[::-1], labels[::-1], bbox_to_anchor=(1.04, 1), loc='upper left', borderaxespad=0)
 
@@ -66,10 +66,19 @@ def summary_bar_plot(df_s, title, file_name):
     plt.title(title)
     plt.xscale('linear')
 
-    ax1 = df_s['sum_e'].plot.bar(figsize=(12, 10), width=0.25, color=colors[4], position=1, rot=45)
+    formatter = ScalarFormatter()
+    formatter.set_scientific(False)
+
+    plt.yscale('log')
+    ax1 = df_s['sum_e'].plot.bar(figsize=(12, 6.75), width=0.25, color=colors[4], position=1, rot=70)
 
     ax2 = ax1.twinx()
+
+    plt.yscale('log')
     df_s['sum_u'].plot.bar(width=0.25, color=colors[3], ax=ax2, position=0)
+
+    ax1.yaxis.set_minor_formatter(formatter)
+    ax2.yaxis.set_minor_formatter(formatter)
 
     handles1, _ = ax1.get_legend_handles_labels()
     handles2, _ = ax2.get_legend_handles_labels()
@@ -85,10 +94,13 @@ def summary_bar_plot(df_s, title, file_name):
 
 
 if __name__ == "__main__":
-    df_entropy = pd.read_csv('data/analysis/2020-11-25/entropy.csv', index_col=0).T
-    df_uniformity = pd.read_csv('data/analysis/2020-11-25/uniformity.csv', index_col=0).T
+    df_entropy = pd.read_csv('data/analysis/2020-11-26/entropy.csv', index_col=0).T
+    df_uniformity = pd.read_csv('data/analysis/2020-11-26/uniformity.csv', index_col=0).T
 
-    grouped_horizontal_bar_plot(df_entropy, 'Entropy', MaxNLocator(nbins=10, prune=None),
+    # print(df_entropy.T.to_markdown(floatfmt=".5f"))
+    # print(df_uniformity.T.to_markdown(floatfmt=".3f"))
+
+    grouped_horizontal_bar_plot(df_entropy, 'Entropy', MaxNLocator(nbins=4, prune=None),
                                 'methods_entropy_compare.png')
 
     grouped_horizontal_bar_plot(df_uniformity, 'Uniformity index', MaxNLocator(nbins=4, prune='both'),

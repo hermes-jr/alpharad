@@ -153,21 +153,21 @@ def m_deviation():
     result = []
     cumulative_ma_x = 0
     cumulative_ma_y = 0
-    average_window = 800
+    moving_average_window_size = 800
 
     for x, y in points:
         # Update moving average
-        cumulative_ma_x = cumulative_ma_x + x - cumulative_ma_x / average_window
-        cumulative_ma_y = cumulative_ma_y + y - cumulative_ma_y / average_window
+        cumulative_ma_x = cumulative_ma_x + x - cumulative_ma_x / moving_average_window_size
+        cumulative_ma_y = cumulative_ma_y + y - cumulative_ma_y / moving_average_window_size
 
-        moving_average_x = cumulative_ma_x / average_window
+        moving_average_x = cumulative_ma_x / moving_average_window_size
         good_range_x = min(width - moving_average_x, moving_average_x - 0)
 
-        moving_average_y = cumulative_ma_y / average_window
+        moving_average_y = cumulative_ma_y / moving_average_window_size
         good_range_y = min(height - moving_average_y, moving_average_y - 0)
 
         # Check current value deviation against the average.
-        # If one side of the truncated bell is larger then the other, ignore the excess
+        # If one side of the truncated bell is larger then the other, ignore the excess to avoid bias
         if x != moving_average_x and moving_average_x + good_range_x > x > moving_average_x - good_range_x:
             full_byte, byte = byte_acc(x < moving_average_x)
             if full_byte:

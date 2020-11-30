@@ -70,20 +70,22 @@ def summary_bar_plot(df_s, title, file_name):
     formatter.set_scientific(False)
 
     plt.yscale('log')
-    ax1 = df_s['sum_e'].plot.bar(figsize=(12, 6.75), width=0.25, color=colors[4], position=1, rot=70)
+    ax1 = df_s['avg_e'].plot.bar(figsize=(12, 6.75), width=0.25, color=colors[4], position=1, rot=70)
 
     ax2 = ax1.twinx()
 
     plt.yscale('log')
-    df_s['sum_u'].plot.bar(width=0.25, color=colors[3], ax=ax2, position=0)
+    df_s['avg_u'].plot.bar(width=0.25, color=colors[3], ax=ax2, position=0)
 
     ax1.yaxis.set_minor_formatter(formatter)
+    ax1.yaxis.set_major_formatter(formatter)
     ax2.yaxis.set_minor_formatter(formatter)
+    ax2.yaxis.set_major_formatter(formatter)
 
     handles1, _ = ax1.get_legend_handles_labels()
     handles2, _ = ax2.get_legend_handles_labels()
 
-    labels = ['Cumulative entropy', 'Cumulative uniformity']
+    labels = ['Average entropy', 'Average uniformity']
     ax2.legend(handles1 + handles2, labels, loc='upper left')
 
     ax1.set_ylabel(labels[0])
@@ -106,9 +108,11 @@ if __name__ == "__main__":
     grouped_horizontal_bar_plot(df_uniformity, 'Uniformity index', MaxNLocator(nbins=4, prune='both'),
                                 'methods_uniformity_compare.png')
 
-    # Get cumulative values for summary
+    # Get average values for summary
     df_summary = pd.DataFrame(index=df_entropy.index)
-    df_summary["sum_e"] = df_entropy[df_entropy.columns[1:]].sum(axis=1)
-    df_summary["sum_u"] = df_uniformity[df_uniformity.columns[1:]].sum(axis=1)
+    samples = len(df_entropy.columns) - 1
+    df_summary['avg_e'] = df_entropy[df_entropy.columns[1:]].sum(axis=1).divide(samples)
+    df_summary['avg_u'] = df_uniformity[df_uniformity.columns[1:]].sum(axis=1).divide(samples)
+    df_summary.sort_values(['avg_e', 'avg_u'], inplace=True)
 
     summary_bar_plot(df_summary, 'Methods comparison summary', 'methods_summary_compare.png')

@@ -25,7 +25,9 @@ along with alpharad.  If not, see <https://www.gnu.org/licenses/>.
 #include <stdlib.h>
 #include "dto.h"
 
-bytes_spawned process_image_default(const uint8_t *p, uint size);
+bytes_spawned process_image_parity(const uint8_t *p, uint size);
+
+bytes_spawned process_image_rough(const uint8_t *p, uint size);
 
 bytes_spawned process_image_comparator(const uint8_t *p, uint size);
 

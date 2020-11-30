@@ -26,7 +26,9 @@ void data_extractors_test_init(void);
 
 void data_extractors_test_teardown(void);
 
-void test_data_default(void);
+void test_data_rough(void);
+
+void test_data_parity(void);
 
 #if HAVE_OPENSSL
 

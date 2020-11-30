@@ -68,7 +68,8 @@ int main(int argc, char **argv) {
     };
 
     CU_TestInfo data_extraction_suite_tests[] = {
-            {"Data default", test_data_default},
+            {"Data rough", test_data_rough},
+            {"Data parity", test_data_parity},
 #if HAVE_OPENSSL
             {"Data SHA256 single frame", test_data_sha256_non_blank_frames},
             {"Data SHA256 every frame", test_data_sha256_all_frames},

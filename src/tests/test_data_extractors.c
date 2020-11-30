@@ -54,19 +54,52 @@ void data_extractors_test_teardown(void) {
     free(mock_frame);
 }
 
-void test_data_default(void) {
+void test_data_rough(void) {
     /* Nothing should come from blank frames */
-    bytes_spawned result = process_image_default(mock_frame, screen_buffer_size);
+    bytes_spawned result = process_image_rough(mock_frame, screen_buffer_size);
     CU_ASSERT_EQUAL(result.len, 0)
 
     /* Each flash should spawn one byte */
     mock_frame[0] = mock_frame[screen_buffer_size - 4] = 0xFF;
 
-    result = process_image_default(mock_frame, screen_buffer_size);
+    result = process_image_rough(mock_frame, screen_buffer_size);
     CU_ASSERT_EQUAL_FATAL(result.len, 2)
     CU_ASSERT_PTR_NOT_EQUAL_FATAL(result.arr, NULL)
     CU_ASSERT_EQUAL(result.arr[0], 0)
     CU_ASSERT_EQUAL(result.arr[1], 255)
+
+    free(result.arr);
+}
+
+void test_data_parity(void) {
+    /* Nothing should come from blank frames */
+    bytes_spawned result = process_image_parity(mock_frame, screen_buffer_size);
+    CU_ASSERT_EQUAL(result.len, 0)
+
+    uint flashes[][2] = {{12u, 15u}, // 1
+                         {7u,  13u}, // will be ignored, both odd
+                         {11u, 28u}, // 0
+                         {4u,  14u}, // will be ignored, both even
+                         {76u, 21u}, // 1
+                         {39u, 18u}, // 0
+                         {11u, 42u}, // 0
+                         {53u, 50u}, // 0
+                         {19u, 20u}, // 0
+                         {22u, 63u}, // 1
+
+    };
+
+    for (int i = 0; i < 10; i++) {
+        uint yuv_coord = (settings.width * flashes[i][1] + flashes[i][0]) * 2;
+        mock_frame[yuv_coord] = 0xFF;
+        result = process_image_parity(mock_frame, screen_buffer_size);
+        mock_frame[yuv_coord] = 0x00;
+    }
+
+    CU_ASSERT_EQUAL_FATAL(result.len, 1)
+    CU_ASSERT_PTR_NOT_EQUAL_FATAL(result.arr, NULL)
+    /* 10100001 */
+    CU_ASSERT_EQUAL(result.arr[0], 161)
 
     free(result.arr);
 }

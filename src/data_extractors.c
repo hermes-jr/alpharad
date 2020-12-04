@@ -186,7 +186,7 @@ void register_processors(void) {
 
             {"ROUGH",
              "Close to no processing, produces normally distributed values",
-             process_image_parity},
+             process_image_rough},
 
 #if HAVE_OPENSSL
             {"SHA256",

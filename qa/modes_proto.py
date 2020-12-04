@@ -115,6 +115,22 @@ def m_compare_first_try():
     return result
 
 
+def m_rough():
+    """
+    One of the first attempts, compares percentiles
+    :return:  1 byte per flash
+    """
+    global points
+    result = []
+
+    for x, y in points:
+        as_idx = width * y + x
+        coord_as_byte = round((as_idx / (width * height - 1)) * 255)
+        result.append(coord_as_byte)
+
+    return result
+
+
 def m_sha():
     """
     When we detect a flash, we feed the whole frame state to sha256 function. Thus, we guarantee that at least
@@ -370,6 +386,7 @@ if __name__ == "__main__":
         m_quantile_viktor,
         m_parity,
         m_parity_per_frame,
+        m_rough,
         m_deviation,
         m_sha,
     ]

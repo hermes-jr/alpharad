@@ -96,8 +96,8 @@ def summary_bar_plot(df_s, title, file_name):
 
 
 if __name__ == "__main__":
-    df_entropy = pd.read_csv('data/analysis/2020-11-26/entropy.csv', index_col=0).T
-    df_uniformity = pd.read_csv('data/analysis/2020-11-26/uniformity.csv', index_col=0).T
+    df_entropy = pd.read_csv('data/analysis/2020-12-04/entropy.csv', index_col=0).T
+    df_uniformity = pd.read_csv('data/analysis/2020-12-04/uniformity.csv', index_col=0).T
 
     # print(df_entropy.T.to_markdown(floatfmt=".5f"))
     # print(df_uniformity.T.to_markdown(floatfmt=".3f"))

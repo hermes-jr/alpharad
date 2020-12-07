@@ -177,10 +177,10 @@ def m_deviation():
         cumulative_ma_y = cumulative_ma_y + y - cumulative_ma_y / moving_average_window_size
 
         moving_average_x = cumulative_ma_x / moving_average_window_size
-        good_range_x = min(width - moving_average_x, moving_average_x - 0)
+        good_range_x = min(width - moving_average_x, moving_average_x)
 
         moving_average_y = cumulative_ma_y / moving_average_window_size
-        good_range_y = min(height - moving_average_y, moving_average_y - 0)
+        good_range_y = min(height - moving_average_y, moving_average_y)
 
         # Check current value deviation against the average.
         # If one side of the truncated bell is larger then the other, ignore the excess to avoid bias

@@ -31,6 +31,8 @@ bytes_spawned process_image_rough(const uint8_t *p, uint size);
 
 bytes_spawned process_image_comparator(const uint8_t *p, uint size);
 
+bytes_spawned process_image_deviation(const uint8_t *p, uint size);
+
 #if HAVE_OPENSSL
 
 bytes_spawned process_image_sha256_non_blank_frames(const uint8_t *p, uint size);

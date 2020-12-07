@@ -47,6 +47,17 @@ void data_extractors_test_init(void) {
     /* Common test points */
     coord1 = settings.width * 2 + 2; // x=1 y=1
     coord2 = settings.width * 2 + 6; // x=3 y=1
+
+    /* Zero out bit accumulator */
+    bool full_byte = false;
+    uint8_t ignore;
+    for (int i = 0; i < 16; i++) {
+        full_byte = bit_accumulator(0, &ignore);
+        /* Full pass overwrites with zeros, bail out as soon as bit pointer aligns with the least significant bit */
+        if (i > 8 && full_byte) {
+            break;
+        }
+    }
 }
 
 /* Free fake frame buffer */
@@ -89,7 +100,7 @@ void test_data_parity(void) {
 
     };
 
-    for (int i = 0; i < 10; i++) {
+    for (ulong i = 0; i < sizeof(flashes) / sizeof(flashes[0]); i++) {
         uint yuv_coord = (settings.width * flashes[i][1] + flashes[i][0]) * 2;
         mock_frame[yuv_coord] = 0xFF;
         result = process_image_parity(mock_frame, screen_buffer_size);
@@ -100,6 +111,83 @@ void test_data_parity(void) {
     CU_ASSERT_PTR_NOT_EQUAL_FATAL(result.arr, NULL)
     /* 10100001 */
     CU_ASSERT_EQUAL(result.arr[0], 161)
+
+    free(result.arr);
+}
+
+void test_data_comparator(void) {
+    /* Nothing should come from blank frames */
+    bytes_spawned result = process_image_comparator(mock_frame, screen_buffer_size);
+    CU_ASSERT_EQUAL(result.len, 0)
+
+    uint flashes[][2] = {{0u,                     settings.height - 1}, // 1
+                         {settings.width - 1,     0u}, // 0
+                         {settings.width / 2 - 5, settings.height - 10}, // 1
+                         {settings.width - 10,    4u}, // 0
+                         {settings.width / 2 + 2, settings.height / 2 - 2}, // 0
+                         {settings.width - 1,     1u}, // 0
+                         {settings.width - 10,    1u}, // 0
+                         {2u,                     settings.height / 2 + 5}, // 1
+
+    };
+
+    for (ulong i = 0; i < sizeof(flashes) / sizeof(flashes[0]); i++) {
+        uint yuv_coord = (settings.width * flashes[i][1] + flashes[i][0]) * 2;
+        mock_frame[yuv_coord] = 0xFF;
+        result = process_image_comparator(mock_frame, screen_buffer_size);
+        mock_frame[yuv_coord] = 0x00;
+    }
+
+    CU_ASSERT_EQUAL_FATAL(result.len, 1)
+    CU_ASSERT_PTR_NOT_EQUAL_FATAL(result.arr, NULL)
+    /* 10100001 */
+    CU_ASSERT_EQUAL(result.arr[0], 161)
+
+    free(result.arr);
+}
+
+
+void test_data_deviation(void) {
+    /* Nothing should come from blank frames */
+    bytes_spawned result = process_image_deviation(mock_frame, screen_buffer_size);
+    CU_ASSERT_EQUAL(result.len, 0)
+
+    extern const int moving_average_window_size;
+    extern ulong cumulative_ma_x;
+    extern ulong cumulative_ma_y;
+
+    /*
+     * Adjust the moving average first, x:200, y:100
+     * Valid range for X: 0-400: 0-199 outputs 1, 201-400 outputs 0. Everything else will be discarded
+     * Valid range for Y: 0-200: 0-99 outputs 1, 101-200 outputs 0. Same rules apply
+     */
+//    set_cumulative_ma_x(200 * moving_average_window_size);
+//    set_cumulative_ma_y(100 * moving_average_window_size);
+    cumulative_ma_x = 200 * (moving_average_window_size + 1);
+    cumulative_ma_y = 100 * (moving_average_window_size + 1);
+
+    uint flashes[][2] = {{50u,  194u}, // 10
+                         {200u, 13u}, // 1, x ignored, being equal to moving average
+                         {345u, 400u}, // 0, y discarded because it is beyond the normalized area
+                         {383u, 188u}, // 00
+                         {399u, 34u}, // 01
+    };
+
+    for (ulong i = 0; i < sizeof(flashes) / sizeof(flashes[0]); i++) {
+        uint yuv_coord = (settings.width * flashes[i][1] + flashes[i][0]) * 2;
+        mock_frame[yuv_coord] = 0xFF;
+        result = process_image_deviation(mock_frame, screen_buffer_size);
+        mock_frame[yuv_coord] = 0x00;
+    }
+
+    CU_ASSERT_EQUAL_FATAL(result.len, 1)
+    CU_ASSERT_PTR_NOT_EQUAL_FATAL(result.arr, NULL)
+    /* 10100001 */
+    CU_ASSERT_EQUAL(result.arr[0], 161)
+
+    /* These must have been affected by flashes */
+    CU_ASSERT_NOT_EQUAL(cumulative_ma_x, 200u * moving_average_window_size)
+    CU_ASSERT_NOT_EQUAL(cumulative_ma_y, 100u * moving_average_window_size)
 
     free(result.arr);
 }

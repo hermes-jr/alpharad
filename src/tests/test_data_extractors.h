@@ -30,6 +30,10 @@ void test_data_rough(void);
 
 void test_data_parity(void);
 
+void test_data_comparator(void);
+
+void test_data_deviation(void);
+
 #if HAVE_OPENSSL
 
 void test_data_sha256_non_blank_frames(void);

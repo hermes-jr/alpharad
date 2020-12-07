@@ -31,10 +31,16 @@ along with alpharad.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <stdio.h>
 
+extern struct settings settings;
+
+// Byte accumulator
 static uint8_t buf_byte;
 ulong bytes = 0;
 
-extern struct settings settings;
+// Deviation method variables
+const int moving_average_window_size = 800;
+ulong cumulative_ma_x = 0;
+ulong cumulative_ma_y = 0;
 
 bytes_spawned process_image_parity(const uint8_t *p, uint size) {
     bytes_spawned result = {0, NULL};
@@ -101,11 +107,90 @@ bytes_spawned process_image_rough(const uint8_t *p, uint size) {
 }
 
 bytes_spawned process_image_comparator(const uint8_t *p, uint size) {
-    // FIXME: implement
-    (void) size;
-    (void) p[0];
     bytes_spawned result = {0, NULL};
+
+    points_detected points = get_all_flashes(p, size, FULL_SCAN);
+
+    if (points.len == 0) {
+        return result;
+    }
+
+    bool full_byte = false;
+    for (uint i = 0; i < points.len; i++) {
+        coordinate cp = points.arr[i];
+
+        full_byte = bit_accumulator((float) cp.x / (float) settings.width < (float) cp.y / (float) settings.height,
+                                    &buf_byte);
+        if (full_byte) {
+            result.len++;
+            result.arr = realloc(result.arr, result.len);
+            result.arr[result.len - 1] = buf_byte;
+            bytes++;
+            D(log_p(LOG_TRACE, "Flash at %3d:%3d generated: %3d\n", cp.x, cp.y, buf_byte));
+        }
+    }
+
+    free(points.arr);
     return result;
+}
+
+bytes_spawned process_image_deviation(const uint8_t *p, uint size) {
+    bytes_spawned result = {0, NULL};
+
+    points_detected points = get_all_flashes(p, size, FULL_SCAN);
+
+    if (points.len == 0) {
+        return result;
+    }
+
+    bool full_byte = false;
+    for (uint i = 0; i < points.len; i++) {
+        coordinate cp = points.arr[i];
+
+        // Update moving average
+        cumulative_ma_x = cumulative_ma_x + cp.x - cumulative_ma_x / moving_average_window_size;
+        cumulative_ma_y = cumulative_ma_y + cp.y - cumulative_ma_y / moving_average_window_size;
+
+        uint moving_average_x = cumulative_ma_x / moving_average_window_size;
+        uint good_range_x = fmin(settings.width - settings.crop - moving_average_x, moving_average_x - settings.crop);
+
+        uint moving_average_y = cumulative_ma_y / moving_average_window_size;
+        uint good_range_y = fmin(settings.height - settings.crop - moving_average_y, moving_average_y - settings.crop);
+
+        D(log_p(LOG_TRACE, "Updated averages: x: %d, y: %d, ma_x: %d, ma_y: %d\n",
+                cumulative_ma_x, cumulative_ma_y,
+                moving_average_x, moving_average_y));
+
+        // Check current value deviation against the average.
+        // If one side of the truncated bell is larger then the other, ignore the excess to avoid bias
+        if (cp.x != moving_average_x && moving_average_x + good_range_x > cp.x &&
+            cp.x > moving_average_x - good_range_x) {
+            full_byte = bit_accumulator(cp.x < moving_average_x, &buf_byte);
+            if (full_byte) {
+                result.len++;
+                result.arr = realloc(result.arr, result.len);
+                result.arr[result.len - 1] = buf_byte;
+                bytes++;
+                D(log_p(LOG_TRACE, "Flash at %3d:%3d generated: %3d\n", cp.x, cp.y, buf_byte));
+            }
+        }
+
+        if (cp.y != moving_average_y && moving_average_y + good_range_y > cp.y &&
+            cp.y > moving_average_y - good_range_y) {
+            full_byte = bit_accumulator(cp.y < moving_average_y, &buf_byte);
+            if (full_byte) {
+                result.len++;
+                result.arr = realloc(result.arr, result.len);
+                result.arr[result.len - 1] = buf_byte;
+                bytes++;
+                D(log_p(LOG_TRACE, "Flash at %3d:%3d generated: %3d\n", cp.x, cp.y, buf_byte));
+            }
+        }
+    }
+
+    free(points.arr);
+    return result;
+
 }
 
 #if HAVE_OPENSSL
@@ -205,6 +290,10 @@ void register_processors(void) {
              "and spawns a bit. This is the slowest method so far, "
              "it yields approximately 1 byte per 8 flashes",
              process_image_comparator},
+
+            {"DEVIATION",
+             "Produces either 1 or 0 depending on the direction of deviation of coordinate from the mean.",
+             process_image_deviation},
 
             FRAME_PROCESSOR_NULL
     };

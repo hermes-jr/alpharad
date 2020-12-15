@@ -19,13 +19,15 @@
 threads=12
 # Modify to balance speed vs detail
 batch_size=512
-#export MPLBACKEND="ps"
+export MPLBACKEND="ps"
 
 # 32 for sha256, 1 for default and 1/8 for comparator
-data_to_points_ratio='32'
+#data_to_points_ratio='32'
 
-calculated_ratio=$(bc <<<"scale=4; ${data_to_points_ratio}")
+#calculated_ratio=$(bc <<<"scale=4; ${data_to_points_ratio}")
 total_points="$(wc -l ../points.log | cut -d' ' -f1)"
+total_bytes="$(wc -c ../out.dat | cut -d' ' -f1)"
+calculated_ratio=$(bc <<<"scale=4; ${total_bytes}/${total_points}")
 ((leap = batch_size * threads))
 
 # Temporary working directory
@@ -52,8 +54,8 @@ for cur_thread in $(seq 0 $((threads - 1))); do
       head -n "${n}" ../points.log >"${points_file}"
       head -c "$(bc <<<"scale=0; ${n}*(${calculated_ratio})/1")" ../out.dat >"${data_file}"
 
-      python3 -O coords_to_scatter.py --points "${points_file}"
-      python3 -O plot_data.py --data "${data_file}" --points "${points_file}"
+      #python3 -O coords_to_scatter.py --points "${points_file}"
+      python3 -O plot_data.py --data "${data_file}" --points "${points_file}" --stats
     done
   } &
 done

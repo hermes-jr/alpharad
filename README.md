@@ -9,6 +9,8 @@ This software is powered by [V4L2](https://www.linuxtv.org/) library and [OpenSS
 
 A bunch of helper utilities are provided along with alpharad and can be found in `qa` directory.
 
+Some additional details are available in my [blog post](https://blog.cyllene.net/2020/04/diy-quantum-rng/).
+
 ### Getting started
 
 Clone this repository
